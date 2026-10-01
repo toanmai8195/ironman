@@ -1,0 +1,94 @@
+load("@rules_java//java:defs.bzl", "java_binary", "java_library", "java_test")
+
+# Class do image Flink cung cấp (/opt/flink/lib, xem docker/Dockerfile) -> dùng để compile, không đóng vào fat jar (deploy_env).
+_FLINK_PROVIDED = [
+    "@maven//:org_apache_flink_flink_clients",
+    "@maven//:org_apache_flink_flink_connector_base",
+    "@maven//:org_apache_flink_flink_core",
+    "@maven//:org_apache_flink_flink_core_api",
+    "@maven//:org_apache_flink_flink_metrics_core",
+    "@maven//:org_apache_flink_flink_streaming_java",
+    "@maven//:org_apache_flink_flink_table_common",
+    "@maven//:org_apache_flink_flink_table_runtime",
+    "@maven//:org_apache_hadoop_hadoop_client_api",
+    "@maven//:org_apache_iceberg_iceberg_flink_runtime_1_20",
+    "@maven//:org_slf4j_slf4j_api",
+]
+
+java_library(
+    name = "flink_provided",
+    exports = _FLINK_PROVIDED,
+)
+
+java_binary(
+    name = "flink_provided_bin",
+    main_class = "none",
+    runtime_deps = [":flink_provided"],
+)
+
+java_library(
+    name = "cdc_lib",
+    srcs = glob(
+        ["*.java"],
+        exclude = ["*Test.java"],
+    ),
+    deps = [
+        ":flink_provided",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:org_apache_flink_flink_connector_kafka",
+        "@maven//:org_apache_kafka_kafka_clients",
+    ],
+)
+
+# Đọc event CDC từ Kafka, làm phẳng, ghi vào Iceberg bronze; chạy trên cluster Flink (checkpoint cấu hình ở compose).
+#   com/tm/flink/build.sh   # build fat jar -> com/tm/flink/dist/cdc-flatten.jar, xem com/tm/flink/SETUP.md
+java_binary(
+    name = "cdc_flatten",
+    deploy_env = [":flink_provided_bin"],
+    main_class = "com.tm.flink.CdcFlatten",
+    runtime_deps = [":cdc_lib"],
+)
+
+java_test(
+    name = "cdc_event_test",
+    srcs = ["CdcEventTest.java"],
+    test_class = "com.tm.flink.CdcEventTest",
+    deps = [
+        ":cdc_lib",
+        "@maven//:junit_junit",
+    ],
+)
+
+java_test(
+    name = "iceberg_bronze_test",
+    srcs = ["IcebergBronzeTest.java"],
+    test_class = "com.tm.flink.IcebergBronzeTest",
+    deps = [
+        ":cdc_lib",
+        ":flink_provided",
+        "@maven//:junit_junit",
+    ],
+)
+
+java_test(
+    name = "window_count_test",
+    srcs = ["WindowCountTest.java"],
+    test_class = "com.tm.flink.WindowCountTest",
+    deps = [
+        ":cdc_lib",
+        ":flink_provided",
+        "@maven//:junit_junit",
+    ],
+)
+
+java_test(
+    name = "cdc_record_test",
+    srcs = ["CdcRecordTest.java"],
+    test_class = "com.tm.flink.CdcRecordTest",
+    deps = [
+        ":cdc_lib",
+        ":flink_provided",
+        "@maven//:junit_junit",
+        "@maven//:org_apache_kafka_kafka_clients",
+    ],
+)

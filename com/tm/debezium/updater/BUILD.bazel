@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library")
+load("//tools/rules:com_tm_container.bzl", "com_tm_go_image")
+
+go_library(
+    name = "updater_lib",
+    srcs = ["main.go"],
+    importpath = "com.tm/ironman/com/tm/debezium/updater",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//com/tm/debezium/updater/internal/status",
+        "@com_github_jackc_pgx_v5//pgxpool",
+    ],
+)
+
+# pg_updater: cập nhật trạng thái 1 đơn hàng ngẫu nhiên mỗi giây, để có luồng CDC liên tục.
+#   bazel run //com/tm/debezium/updater:pg_updater
+#   bazel run --config=linux-arm64 //com/tm/debezium/updater:pg_updater_docker
+com_tm_go_image(
+    name = "pg_updater",
+    package_name = package_name(),
+    embed = [":updater_lib"],
+    visibility = ["//visibility:public"],
+)

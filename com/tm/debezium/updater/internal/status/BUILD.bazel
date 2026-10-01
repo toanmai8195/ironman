@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "status",
+    srcs = ["status.go"],
+    importpath = "com.tm/ironman/com/tm/debezium/updater/internal/status",
+    visibility = ["//com/tm/debezium/updater:__subpackages__"],
+)
+
+go_test(
+    name = "status_test",
+    srcs = ["status_test.go"],
+    embed = [":status"],
+)

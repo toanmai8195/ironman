@@ -33,6 +33,7 @@ Image Go: `com.tm.go.<name>:v1.0.0`; mỗi `com_tm_go_image` sinh `<name>`, `<na
 | Thư mục | Công nghệ | Mục tiêu | Trạng thái |
 |---------|-----------|----------|------------|
 | [`com/tm/debezium`](com/tm/debezium) | Postgres + Debezium + Kafka + Go consumer | Bắt thay đổi Postgres thành event CDC, consume và liệt kê bằng service Go | `done` |
+| [`com/tm/flink`](com/tm/flink/SETUP.md) | Flink (Java) + Iceberg | pg → Debezium → Kafka → Flink → Iceberg (bronze): làm phẳng CDC, checkpoint/savepoint, event time, application mode. Chạy: `com/tm/flink/build.sh` rồi `docker compose ... --profile flink up -d --build`; query bảng bằng DBeaver qua StarRocks (`localhost:19030`) | `done` |
 
 Trạng thái: `idea` → `wip` → `done` / `dropped`
 
@@ -47,6 +48,7 @@ postgres (wal_level=logical) ──Debezium──► kafka: ironman.public.{cust
 ```bash
 # 1. Build + load image consumer vào Docker local (Apple Silicon; máy x86 dùng linux-amd64)
 bazel run --config=linux-arm64 //com/tm/debezium/consumer:cdc_consumer_docker
+bazel run --config=linux-arm64 //com/tm/debezium/updater:pg_updater_docker   # sinh 1 update/giây vào Postgres
 
 # 2. Dựng stack (postgres, kafka, debezium, đăng ký connector, consumer)
 docker compose -f com/tm/docker/ironman/docker-compose.yml up -d

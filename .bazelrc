@@ -2,7 +2,6 @@ common --enable_bzlmod
 common --repo_env=DO_NOT_TRACK=1
 
 build --verbose_failures
-build --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 test --test_output=errors
 
 # rules_oci: CopyToDirectory / CopyFile không chạy được trong darwin-sandbox
@@ -13,6 +12,12 @@ build --repo_env=DOCKER_CONFIG=/dev/null
 # Go thuần, không CGO (image distroless static)
 build --@rules_go//go/config:pure
 build --action_env=CGO_ENABLED=0
+
+# Java 17 (Flink 1.20 hỗ trợ chính thức)
+build --java_language_version=17
+build --java_runtime_version=remotejdk_17
+build --tool_java_language_version=17
+build --tool_java_runtime_version=remotejdk_17
 
 # Image đúng kiến trúc máy chạy container:
 #   bazel run --config=linux-arm64 <target>_docker   (Mac Apple Silicon)

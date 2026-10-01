@@ -2,10 +2,18 @@
 #
 # Thử nghiệm 1 — CDC: Postgres ──Debezium──► Kafka ──► cdc-consumer (Go)
 #   bazel run --config=linux-arm64 //com/tm/debezium/consumer:cdc_consumer_docker   # load image (1 lần / mỗi lần sửa code)
+#   bazel run --config=linux-arm64 //com/tm/debezium/updater:pg_updater_docker      # load image pg-updater (1 rps vào Postgres)
 #   docker compose -f com/tm/docker/ironman/docker-compose.yml up -d
 #   docker logs -f ironman-cdc-consumer
 #
-# Port host chọn khác vision/thor để chạy song song được: pg 5434 · kafka 39092 · connect 8084
+# Thử nghiệm 2 — Flink (profile `flink`, cần cả stack Debezium ở trên): application mode, đọc topic CDC, ghi Iceberg bronze
+#   com/tm/flink/build.sh                                  # build fat jar -> com/tm/flink/dist/
+#   docker compose -f com/tm/docker/ironman/docker-compose.yml --profile flink up -d --build
+#   Flink UI: http://localhost:18081 · kết quả đếm in ở: docker logs -f ironman-flink-taskmanager
+#   Resume từ savepoint: SAVEPOINT_PATH=s3://flink/savepoints/... docker compose ... up -d flink-jobmanager flink-taskmanager
+#   (xem com/tm/flink/SETUP.md)
+#
+# Port host chọn khác vision/thor để chạy song song được: pg 5434 · kafka 39092 · connect 8084 · flink ui 18081 · iceberg rest 18181 · starrocks mysql 19030 · minio 19000/19001
 name: ironman
 
 services:
@@ -27,6 +35,19 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  # Sinh tải: mỗi giây đổi trạng thái 1 đơn hàng ngẫu nhiên (RATE_PER_SEC) để có luồng CDC liên tục.
+  # Image do Bazel load vào Docker local: bazel run --config=linux-arm64 //com/tm/debezium/updater:pg_updater_docker
+  # Không muốn tải liên tục thì bỏ service này: docker compose ... up -d --scale pg-updater=0
+  pg-updater:
+    image: com.tm.go.pg_updater:v1.0.0
+    pull_policy: never
+    container_name: ironman-pg-updater
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      PG_DSN: postgres://ironman:ironman@postgres:5432/ironman
+      RATE_PER_SEC: "1"
 
   # Kafka KRaft 1 node. Trong compose dùng kafka:9092; từ host dùng localhost:39092.
   kafka:
@@ -116,6 +137,160 @@ services:
       KAFKA_BROKERS: kafka:9092
       KAFKA_TOPICS: ironman.public.customers,ironman.public.orders
 
+  # ===== Thử nghiệm 2: Flink (profile flink) =====
+
+  # MinIO = S3 local cho checkpoint của Flink. Console: http://localhost:19001 (ironman / ironman-secret).
+  # Pin theo digest của bản local (MinIO không còn pull được từ registry công khai).
+  minio:
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    container_name: ironman-minio
+    profiles: ["flink"]
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports: ["19000:9000", "19001:9001"]
+    environment:
+      MINIO_ROOT_USER: ironman
+      MINIO_ROOT_PASSWORD: ironman-secret
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    image: minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    container_name: ironman-minio-init
+    profiles: ["flink"]
+    depends_on:
+      minio: { condition: service_healthy }
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 ironman ironman-secret &&
+        mc mb --ignore-existing local/flink local/warehouse
+
+  # Iceberg REST catalog; warehouse s3://warehouse trên MinIO, metadata catalog lưu SQLite trong volume.
+  iceberg-rest:
+    image: apache/iceberg-rest-fixture:1.9.2
+    container_name: ironman-iceberg-rest
+    profiles: ["flink"]
+    depends_on:
+      minio-init: { condition: service_completed_successfully }
+    ports: ["18181:8181"]
+    environment:
+      CATALOG_WAREHOUSE: s3://warehouse/
+      CATALOG_URI: jdbc:sqlite:file:/home/iceberg/iceberg_catalog.db?journal_mode=WAL&busy_timeout=30000
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://minio:9000
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      AWS_ACCESS_KEY_ID: ironman
+      AWS_SECRET_ACCESS_KEY: ironman-secret
+      AWS_REGION: us-east-1
+    volumes:
+      - iceberg-catalog:/home/iceberg
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8181/v1/config >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # StarRocks (allin1: FE + BE) để query bảng Iceberg bằng SQL / DBeaver (giao thức MySQL, user root, không mật khẩu).
+  # Image ~8GB. Catalog `ice` được starrocks-init tạo; xem com/tm/flink/SETUP.md.
+  starrocks:
+    image: starrocks/allin1-ubuntu:3.5.8
+    container_name: ironman-starrocks
+    profiles: ["flink"]
+    depends_on:
+      iceberg-rest: { condition: service_healthy }
+    ports: ["19030:9030", "18030:8030"]
+    healthcheck:
+      test: ["CMD-SHELL", "mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+
+  # One-shot: tạo external catalog `ice` trỏ vào Iceberg REST + MinIO (idempotent).
+  starrocks-init:
+    image: starrocks/allin1-ubuntu:3.5.8
+    container_name: ironman-starrocks-init
+    profiles: ["flink"]
+    depends_on:
+      starrocks: { condition: service_healthy }
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        mysql -h starrocks -P 9030 -uroot -e "
+        CREATE EXTERNAL CATALOG IF NOT EXISTS ice PROPERTIES (
+          'type' = 'iceberg',
+          'iceberg.catalog.type' = 'rest',
+          'iceberg.catalog.uri' = 'http://iceberg-rest:8181',
+          'iceberg.catalog.warehouse' = 'warehouse',
+          'aws.s3.endpoint' = 'http://minio:9000',
+          'aws.s3.access_key' = 'ironman',
+          'aws.s3.secret_key' = 'ironman-secret',
+          'aws.s3.enable_path_style_access' = 'true',
+          'aws.s3.region' = 'us-east-1'
+        )"
+
+  # Application mode: JobManager chạy đúng 1 job (jar ở /opt/flink/usrlib), main() chạy ngay trong JobManager nên biến môi trường
+  # của job đặt ở service này. Cấu hình checkpoint/restart/metrics nằm ở FLINK_PROPERTIES, không trong code job.
+  # SAVEPOINT_PATH (tuỳ chọn): chạy tiếp từ savepoint thay vì bắt đầu mới.
+  flink-jobmanager:
+    build: ../../flink/docker
+    image: ironman/flink:1.20.2-iceberg1.9.2
+    container_name: ironman-flink-jobmanager
+    profiles: ["flink"]
+    command: ["standalone-job", "--job-classname", "com.tm.flink.CdcFlatten"]
+    depends_on:
+      minio-init: { condition: service_completed_successfully }
+      kafka-init: { condition: service_completed_successfully }
+      iceberg-rest: { condition: service_healthy }
+    ports: ["18081:8081"]
+    environment:
+      ENABLE_BUILT_IN_PLUGINS: flink-s3-fs-hadoop-1.20.2.jar
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        state.checkpoints.dir: s3://flink/checkpoints
+        state.savepoints.dir: s3://flink/savepoints
+        ${SAVEPOINT_PATH:+execution.savepoint.path: }${SAVEPOINT_PATH:-}
+        state.checkpoints.num-retained: 3
+        execution.checkpointing.interval: 10s
+        execution.checkpointing.mode: EXACTLY_ONCE
+        restart-strategy.type: exponential-delay
+        restart-strategy.exponential-delay.initial-backoff: 2s
+        restart-strategy.exponential-delay.max-backoff: 30s
+        s3.endpoint: http://minio:9000
+        s3.path.style.access: true
+        s3.access-key: ironman
+        s3.secret-key: ironman-secret
+    volumes:
+      - ../../flink/dist:/opt/flink/usrlib:ro
+
+  flink-taskmanager:
+    image: ironman/flink:1.20.2-iceberg1.9.2
+    container_name: ironman-flink-taskmanager
+    profiles: ["flink"]
+    command: ["taskmanager"]
+    depends_on:
+      - flink-jobmanager
+    environment:
+      ENABLE_BUILT_IN_PLUGINS: flink-s3-fs-hadoop-1.20.2.jar
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        s3.endpoint: http://minio:9000
+        s3.path.style.access: true
+        s3.access-key: ironman
+        s3.secret-key: ironman-secret
+    # Application mode: TaskManager cũng cần jar của job trong usrlib (session mode thì JobManager gửi jar sang)
+    volumes:
+      - ../../flink/dist:/opt/flink/usrlib:ro
+
 volumes:
   postgres-data:
+  minio-data:
+  iceberg-catalog:
   kafka-data:
