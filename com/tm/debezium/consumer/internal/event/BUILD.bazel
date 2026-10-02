@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "event",
+    srcs = ["event.go"],
+    importpath = "com.tm/ironman/com/tm/debezium/consumer/internal/event",
+    visibility = ["//com/tm/debezium/consumer:__subpackages__"],
+)
+
+go_test(
+    name = "event_test",
+    srcs = ["event_test.go"],
+    embed = [":event"],
+)

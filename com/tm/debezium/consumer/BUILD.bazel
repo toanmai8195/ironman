@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library")
+load("//tools/rules:com_tm_container.bzl", "com_tm_go_image")
+
+go_library(
+    name = "consumer_lib",
+    srcs = ["main.go"],
+    importpath = "com.tm/ironman/com/tm/debezium/consumer",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//com/tm/debezium/consumer/internal/config",
+        "//com/tm/debezium/consumer/internal/consume",
+    ],
+)
+
+# cdc_consumer: đọc event CDC từ Kafka, in log.
+#   bazel run //com/tm/debezium/consumer:cdc_consumer
+#   bazel run --config=linux-arm64 //com/tm/debezium/consumer:cdc_consumer_docker
+com_tm_go_image(
+    name = "cdc_consumer",
+    package_name = package_name(),
+    embed = [":consumer_lib"],
+    visibility = ["//visibility:public"],
+)

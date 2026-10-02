@@ -1,0 +1,13 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "consume",
+    srcs = ["consume.go"],
+    importpath = "com.tm/ironman/com/tm/debezium/consumer/internal/consume",
+    visibility = ["//com/tm/debezium/consumer:__subpackages__"],
+    deps = [
+        "//com/tm/debezium/consumer/internal/config",
+        "//com/tm/debezium/consumer/internal/event",
+        "@com_github_ibm_sarama//:sarama",
+    ],
+)

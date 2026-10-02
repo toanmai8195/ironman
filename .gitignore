@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Bazel
+bazel-*
+.bazel/
+.bazelrc.user
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.iml
