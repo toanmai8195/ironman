@@ -1,8 +1,7 @@
 # Flink: pg → Debezium → Kafka → Flink → Iceberg (bronze)
 
 ```
-postgres ──Debezium──► kafka: ironman.public.{customers,orders} ──► Flink job (cdc-flatten) ─┬─► Iceberg bronze.cdc_events (MinIO)
-                                                                                              └─► đếm theo window event-time (in ra log)
+postgres ──Debezium──► kafka: ironman.public.{customers,orders} ──► Flink job (cdc-flatten) ──► Iceberg bronze.cdc_events (MinIO)
 ```
 
 ## Các bước đã làm
@@ -14,7 +13,7 @@ postgres ──Debezium──► kafka: ironman.public.{customers,orders} ──
 | 3 | Chạy trên cluster, checkpoint lưu MinIO, kill TaskManager vẫn phục hồi | checkpoint, restart strategy |
 | 4 | Ghi file JSON Lines lên S3 | FileSink, commit theo checkpoint |
 | 5 | Ghi vào Iceberg (REST catalog, Parquet trên MinIO) | table format, snapshot, commit theo checkpoint |
-| 6 | Event time + watermark, window 1 phút, event trễ vào side output | event time, allowed lateness |
+| 6 | Event time + watermark từ `ts_ms` (window đếm theo `bảng|op` đã thử rồi bỏ) | event time, watermark |
 | 7 | Application mode, savepoint | cách chạy gần prod |
 
 Mỗi bước xong thì dọn code thừa của bước cũ nên repo chỉ giữ code của trạng thái cuối (bước 4 đã được thay bằng Iceberg ở bước 5). Prometheus chưa làm, để khi vào dự án thực tế.
@@ -26,13 +25,13 @@ Từ thư mục gốc repo:
 ```bash
 F=com/tm/docker/ironman/docker-compose.yml
 
-# 1. Build fat jar -> com/tm/flink/dist/cdc-flatten.jar, và load image pg-updater (sinh 1 update/giây vào Postgres)
-com/tm/flink/build.sh
+# 1. Build image Flink (base Flink + jar Iceberg/Hadoop + job) và image pg-updater (sinh 1 update/giây vào Postgres), load vào Docker
+bazel run --config=linux-arm64 //com/tm/flink:cdc_flatten_docker
 bazel run --config=linux-arm64 //com/tm/debezium/updater:pg_updater_docker
 
 # 2. Dựng stack: Postgres, Kafka, Debezium + Flink (JobManager, TaskManager) + MinIO + Iceberg REST.
 #    Application mode: JobManager tự chạy job CdcFlatten, không cần nộp tay.
-docker compose -f $F --profile flink up -d --build
+docker compose -f $F --profile flink up -d
 
 # 3. Xem: Flink UI http://localhost:18081, MinIO http://localhost:19001 (ironman / ironman-secret),
 #    query bảng Iceberg bằng DBeaver -> StarRocks localhost:19030 (xem mục Query dữ liệu Iceberg)
@@ -46,7 +45,7 @@ docker logs -f ironman-flink-taskmanager
 docker compose -f $F --profile flink down -v
 ```
 
-Cấu hình job qua biến môi trường của service `flink-jobmanager`: `WINDOW_SEC` (mặc định 60), `WATERMARK_DELAY_SEC` (5), `ALLOWED_LATENESS_SEC` (30), `SKIP_SNAPSHOT`.
+Cấu hình job qua biến môi trường của service `flink-jobmanager`: `WATERMARK_DELAY_SEC` (5), `SKIP_SNAPSHOT`.
 
 ## Query dữ liệu Iceberg
 
@@ -174,21 +173,15 @@ SAVEPOINT_PATH=s3://flink/savepoints/savepoint-... docker compose -f $F --profil
 
 Đã quan sát: job `restored` từ savepoint, bảng Iceberg chỉ tăng đúng số event phát sinh lúc cluster tắt (không trùng dòng cũ). Không truyền `SAVEPOINT_PATH` thì job bắt đầu mới và đọc lại từ đầu topic.
 
-## Event time và event trễ
+## Event time
 
-Watermark tính từ `ts_ms` của DB nguồn (không phải lúc Flink nhận). Đã quan sát: các window `WINDOW [16:02:40, ...)` nằm đúng thời điểm của event cũ khi job đọc lại topic, và một event giả có `ts_ms` lùi 5 phút bị đẩy vào side output (`LATE ...`). Tự thử bằng cách bắn message vào topic với `ts_ms` cũ:
-
-```bash
-echo '{"before":null,"after":{"id":99},"source":{"schema":"public","table":"orders","lsn":1},"op":"c","ts_ms":1}' | \
-  docker exec -i ironman-kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server kafka:9092 --topic ironman.public.orders
-```
-
-Window chỉ đóng khi có event mới đẩy watermark đi lên, nên hệ thống ít event thì kết quả ra chậm.
+Watermark tính từ `ts_ms` của DB nguồn (không phải lúc Flink nhận). Hiện job không có window nên watermark chưa ảnh hưởng đến dữ liệu ghi vào Iceberg.
 
 ## Cấu hình và build
 
 - Checkpoint, restart, S3, savepoint nằm ở `FLINK_PROPERTIES` trong compose, không nằm trong code job.
-- Image Flink tuỳ biến: `docker/Dockerfile` (thêm `iceberg-flink-runtime`, `iceberg-aws-bundle`, Hadoop client).
+- Image Flink build bằng Bazel (`rules_oci`, target `//com/tm/flink:cdc_flatten_image`): image Flink gốc (pin digest trong `MODULE.bazel`) + 4 jar Iceberg/AWS/Hadoop vào `/opt/flink/lib` (pin sha256 bằng `http_file`) + fat jar của job vào `/opt/flink/usrlib`. JobManager và TaskManager dùng chung image, không cần mount volume.
 - Fat jar chỉ chứa code job, connector Kafka và Jackson. Class do image cung cấp không đóng vào jar (`deploy_env` trong `BUILD.bazel`).
-- Application mode: cả JobManager và TaskManager đều phải mount jar vào `/opt/flink/usrlib`.
+- Application mode: jar của job phải có trong `/opt/flink/usrlib` ở cả JobManager và TaskManager; vì cùng một image nên luôn đủ.
+- Sửa code job: build lại image rồi `docker compose ... --profile flink up -d --force-recreate flink-jobmanager flink-taskmanager` (đang chạy thì làm theo savepoint ở trên để không đọc lại dữ liệu cũ).
 - Test: `bazel test //com/tm/flink/...`

@@ -1,4 +1,6 @@
 load("@rules_java//java:defs.bzl", "java_binary", "java_library", "java_test")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "tar")
 
 # Class do image Flink cung cấp (/opt/flink/lib, xem docker/Dockerfile) -> dùng để compile, không đóng vào fat jar (deploy_env).
 _FLINK_PROVIDED = [
@@ -41,7 +43,7 @@ java_library(
 )
 
 # Đọc event CDC từ Kafka, làm phẳng, ghi vào Iceberg bronze; chạy trên cluster Flink (checkpoint cấu hình ở compose).
-#   com/tm/flink/build.sh   # build fat jar -> com/tm/flink/dist/cdc-flatten.jar, xem com/tm/flink/SETUP.md
+# Fat jar chỉ chứa code job + connector Kafka + Jackson; được đóng vào image bên dưới.
 java_binary(
     name = "cdc_flatten",
     deploy_env = [":flink_provided_bin"],
@@ -71,17 +73,6 @@ java_test(
 )
 
 java_test(
-    name = "window_count_test",
-    srcs = ["WindowCountTest.java"],
-    test_class = "com.tm.flink.WindowCountTest",
-    deps = [
-        ":cdc_lib",
-        ":flink_provided",
-        "@maven//:junit_junit",
-    ],
-)
-
-java_test(
     name = "cdc_record_test",
     srcs = ["CdcRecordTest.java"],
     test_class = "com.tm.flink.CdcRecordTest",
@@ -91,4 +82,54 @@ java_test(
         "@maven//:junit_junit",
         "@maven//:org_apache_kafka_kafka_clients",
     ],
+)
+
+# ---------------------------------------------------------------------------
+# Image Flink chạy job (JobManager và TaskManager dùng chung image này):
+#   //com/tm/flink:cdc_flatten_image    oci_image
+#   //com/tm/flink:cdc_flatten_docker   load vào Docker local: com.tm.flink.cdc_flatten:v1.0.0
+#   bazel run --config=linux-arm64 //com/tm/flink:cdc_flatten_docker
+# ---------------------------------------------------------------------------
+
+# Jar Iceberg (sink), AWS bundle (S3FileIO) và Hadoop client (Iceberg Flink cần) -> /opt/flink/lib
+tar(
+    name = "flink_lib_tar",
+    srcs = [
+        "@flink_lib_hadoop_client_api//file",
+        "@flink_lib_hadoop_client_runtime//file",
+        "@flink_lib_iceberg_aws_bundle//file",
+        "@flink_lib_iceberg_flink_runtime//file",
+    ],
+    out = "flink_lib_layer.tar",
+    mtree = [
+        "./opt/flink/lib/iceberg-flink-runtime-1.20-1.9.2.jar uid=0 gid=0 mode=0644 type=file content=$(execpath @flink_lib_iceberg_flink_runtime//file)",
+        "./opt/flink/lib/iceberg-aws-bundle-1.9.2.jar uid=0 gid=0 mode=0644 type=file content=$(execpath @flink_lib_iceberg_aws_bundle//file)",
+        "./opt/flink/lib/hadoop-client-api-3.3.6.jar uid=0 gid=0 mode=0644 type=file content=$(execpath @flink_lib_hadoop_client_api//file)",
+        "./opt/flink/lib/hadoop-client-runtime-3.3.6.jar uid=0 gid=0 mode=0644 type=file content=$(execpath @flink_lib_hadoop_client_runtime//file)",
+    ],
+)
+
+# Fat jar của job -> /opt/flink/usrlib (application mode tự nạp jar ở đây)
+tar(
+    name = "cdc_flatten_job_tar",
+    srcs = [":cdc_flatten_deploy.jar"],
+    out = "cdc_flatten_job_layer.tar",
+    mtree = ["./opt/flink/usrlib/cdc-flatten.jar uid=0 gid=0 mode=0644 type=file content=$(execpath :cdc_flatten_deploy.jar)"],
+)
+
+oci_image(
+    name = "cdc_flatten_image",
+    base = "@flink_base",
+    tars = [
+        ":flink_lib_tar",
+        ":cdc_flatten_job_tar",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "cdc_flatten_docker",
+    image = ":cdc_flatten_image",
+    repo_tags = ["com.tm.flink.cdc_flatten:v1.0.0"],
+    visibility = ["//visibility:public"],
 )

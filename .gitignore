@@ -228,8 +228,6 @@ bazel-*
 .vscode/
 *.iml
 
-# Flink fat jar (sinh bởi com/tm/flink/build.sh)
-com/tm/flink/dist/
 
 # IntelliJ Bazel plugin
 .ijwb/

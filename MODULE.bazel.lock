@@ -234,7 +234,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "94uNScD8fQHN4iINk66lDu7nfRhN9KkUQs0uCLo5qB8=",
-        "usagesDigest": "BAZyjXx0kgoczr2W3ralNTGzy/3kEgfbgnlT3B9HUuw=",
+        "usagesDigest": "Mh4OV6cPXfSbr137Yqho/JV96ersOr8VMWWRKrnOcao=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -279,6 +279,49 @@
                 "@@platforms//cpu:arm64": "@distroless_base_linux_arm64_v8"
               },
               "bzlmod_repository": "distroless_base",
+              "reproducible": true
+            }
+          },
+          "flink_base_linux_amd64": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_pull",
+            "attributes": {
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "library/flink",
+              "identifier": "sha256:f0f0a1bcdad2b1b21246256b4c3754c527833930750a5189270aa639043a25c0",
+              "platform": "linux/amd64",
+              "target_name": "flink_base_linux_amd64",
+              "bazel_tags": []
+            }
+          },
+          "flink_base_linux_arm64_v8": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_pull",
+            "attributes": {
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "library/flink",
+              "identifier": "sha256:f0f0a1bcdad2b1b21246256b4c3754c527833930750a5189270aa639043a25c0",
+              "platform": "linux/arm64/v8",
+              "target_name": "flink_base_linux_arm64_v8",
+              "bazel_tags": []
+            }
+          },
+          "flink_base": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_alias",
+            "attributes": {
+              "target_name": "flink_base",
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "library/flink",
+              "identifier": "sha256:f0f0a1bcdad2b1b21246256b4c3754c527833930750a5189270aa639043a25c0",
+              "platforms": {
+                "@@platforms//cpu:x86_64": "@flink_base_linux_amd64",
+                "@@platforms//cpu:arm64": "@flink_base_linux_arm64_v8"
+              },
+              "bzlmod_repository": "flink_base",
               "reproducible": true
             }
           },
@@ -400,7 +443,10 @@
           "explicitRootModuleDirectDeps": [
             "distroless_base",
             "distroless_base_linux_amd64",
-            "distroless_base_linux_arm64_v8"
+            "distroless_base_linux_arm64_v8",
+            "flink_base",
+            "flink_base_linux_amd64",
+            "flink_base_linux_arm64_v8"
           ],
           "explicitRootModuleDirectDevDeps": [],
           "useAllRepos": "NO",

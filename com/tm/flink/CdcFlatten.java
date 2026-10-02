@@ -1,31 +1,22 @@
 package com.tm.flink;
 
 import java.time.Duration;
-import java.time.Instant;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
-import org.apache.flink.util.OutputTag;
 import org.apache.iceberg.flink.CatalogLoader;
 
 /**
  * Event CDC -> CdcRecord (cột cố định + metadata Kafka) -> bảng Iceberg bronze.cdc_events (REST catalog, MinIO).
  *
  * <pre>
- * Kafka ──► source + deserializer + watermark(ts_ms) ──► filter ──┬─► toRow ──► Iceberg FlinkSink
- *                                                                 └─► keyBy(bảng|op) ─► window event-time ─┬─► print (đếm)
- *                                                                                                          └─► print (LATE: quá trễ)
+ * Kafka ──► source + deserializer + watermark(ts_ms) ──► filter ──► toRow ──► Iceberg FlinkSink
  * </pre>
  *
  * Event time = ts_ms của DB nguồn (không phải lúc Flink nhận). Watermark = event time lớn nhất đã thấy trừ
- * WATERMARK_DELAY_SEC: Flink tin rằng sẽ không còn event nào cũ hơn mốc đó. Window đóng khi watermark vượt cuối window,
- * event đến muộn thêm ALLOWED_LATENESS_SEC vẫn được cộng và phát lại kết quả; muộn hơn nữa thì vào side output.
- * Window chỉ đóng khi có event mới đẩy watermark đi lên (hệ thống ít event thì kết quả ra chậm).
+ * WATERMARK_DELAY_SEC.
  *
  * Iceberg sink chỉ commit snapshot khi checkpoint hoàn tất, nên dữ liệu xuất hiện trong bảng theo từng checkpoint.
  * Giao hàng at-least-once: event trùng (sau restart) được xử lý ở silver, không dedup ở bronze.
@@ -34,7 +25,7 @@ import org.apache.iceberg.flink.CatalogLoader;
  * flink-conf (FLINK_PROPERTIES trong compose), không nằm trong code job.
  * Biến môi trường (đọc ở process nộp job): KAFKA_BOOTSTRAP, KAFKA_TOPICS, ICEBERG_REST_URI, ICEBERG_WAREHOUSE,
  * S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, SKIP_SNAPSHOT=true để bỏ các event op=r,
- * WATERMARK_DELAY_SEC, WINDOW_SEC, ALLOWED_LATENESS_SEC.
+ * WATERMARK_DELAY_SEC.
  */
 public final class CdcFlatten {
     public static void main(String[] args) throws Exception {
@@ -49,8 +40,6 @@ public final class CdcFlatten {
         IcebergBronze.ensureTable(catalog);
 
         long watermarkDelaySec = Long.parseLong(env("WATERMARK_DELAY_SEC", "5"));
-        long windowSec = Long.parseLong(env("WINDOW_SEC", "60"));
-        long allowedLatenessSec = Long.parseLong(env("ALLOWED_LATENESS_SEC", "30"));
         boolean skipSnapshot = Boolean.parseBoolean(env("SKIP_SNAPSHOT", "false"));
 
         StreamExecutionEnvironment senv = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -72,18 +61,6 @@ public final class CdcFlatten {
                         .withIdleness(Duration.ofSeconds(10)), "kafka-cdc")
                 .filter(r -> !skipSnapshot || !"r".equals(r.op));
         IcebergBronze.append(records, catalog);
-
-        OutputTag<CdcRecord> late = new OutputTag<>("late", TypeInformation.of(CdcRecord.class));
-        SingleOutputStreamOperator<String> counts = records
-                .keyBy(WindowCount::key)
-                .window(TumblingEventTimeWindows.of(Duration.ofSeconds(windowSec)))
-                .allowedLateness(Duration.ofSeconds(allowedLatenessSec))
-                .sideOutputLateData(late)
-                .process(new WindowCount()).name("window-count");
-        counts.print();
-        counts.getSideOutput(late)
-                .map(r -> "LATE " + WindowCount.key(r) + " ts=" + Instant.ofEpochMilli(r.tsMs) + " row=" + r.row)
-                .print();
 
         senv.execute("cdc-flatten");
     }

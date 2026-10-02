@@ -33,7 +33,7 @@ bazel run --config=linux-arm64 //com/tm/debezium/consumer:cdc_consumer_docker
 bazel run --config=linux-arm64 //com/tm/debezium/updater:pg_updater_docker
 
 # 2. Dựng stack
-docker compose -f com/tm/docker/ironman/docker-compose.yml up -d
+docker compose -f com/tm/docker/ironman/docker-compose.yml --profile consumer up -d
 ```
 
 Thứ tự khởi động do `depends_on` đảm bảo:
@@ -44,7 +44,7 @@ Thứ tự khởi động do `depends_on` đảm bảo:
 4. `debezium-register` PUT connector, chờ connector + task RUNNING rồi thoát (Exit 0 là bình thường)
 5. `cdc-consumer` bắt đầu đọc từ offset đầu (`OffsetOldest`)
 
-> Compose đặt `pull_policy: never` cho `cdc-consumer`. Nếu chưa chạy bước 1, `up` sẽ báo không tìm thấy image `com.tm.go.cdc_consumer:v1.0.0`.
+> `cdc-consumer` nằm trong profile `consumer` và có `pull_policy: never`. Nếu chạy `--profile consumer` mà chưa chạy bước 1, `up` sẽ báo không tìm thấy image `com.tm.go.cdc_consumer:v1.0.0`. Không dùng profile này thì không cần build consumer (ví dụ khi chỉ chạy pipeline Flink).
 
 ## Kiểm tra
 

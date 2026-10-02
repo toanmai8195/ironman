@@ -4,6 +4,8 @@ Sandbox cá nhân để thử nghiệm **từng công nghệ Data Engineering m�
 
 > Đây không phải một hệ thống production hay một pipeline end-to-end. Mục tiêu là học, so sánh và ghi lại trải nghiệm thực tế với từng công cụ.
 
+**Chạy và kiểm tra cả pipeline (update Postgres → CDC → Flink → Iceberg → query): [`SETUP.md`](SETUP.md).**
+
 ## Nguyên tắc
 
 - **Chung hạ tầng, riêng thử nghiệm**: một Bazel module và một docker compose cho cả repo; mỗi thử nghiệm chỉ thêm service nó cần.
@@ -33,7 +35,7 @@ Image Go: `com.tm.go.<name>:v1.0.0`; mỗi `com_tm_go_image` sinh `<name>`, `<na
 | Thư mục | Công nghệ | Mục tiêu | Trạng thái |
 |---------|-----------|----------|------------|
 | [`com/tm/debezium`](com/tm/debezium) | Postgres + Debezium + Kafka + Go consumer | Bắt thay đổi Postgres thành event CDC, consume và liệt kê bằng service Go | `done` |
-| [`com/tm/flink`](com/tm/flink/SETUP.md) | Flink (Java) + Iceberg | pg → Debezium → Kafka → Flink → Iceberg (bronze): làm phẳng CDC, checkpoint/savepoint, event time, application mode. Chạy: `com/tm/flink/build.sh` rồi `docker compose ... --profile flink up -d --build`; query bảng bằng DBeaver qua StarRocks (`localhost:19030`) | `done` |
+| [`com/tm/flink`](com/tm/flink/SETUP.md) | Flink (Java) + Iceberg | pg → Debezium → Kafka → Flink → Iceberg (bronze): làm phẳng CDC, checkpoint/savepoint, event time, application mode. Chạy: `bazel run --config=linux-arm64 //com/tm/flink:cdc_flatten_docker` rồi `docker compose ... --profile flink up -d`; query bảng bằng DBeaver qua StarRocks (`localhost:19030`) | `done` |
 
 Trạng thái: `idea` → `wip` → `done` / `dropped`
 
@@ -51,7 +53,7 @@ bazel run --config=linux-arm64 //com/tm/debezium/consumer:cdc_consumer_docker
 bazel run --config=linux-arm64 //com/tm/debezium/updater:pg_updater_docker   # sinh 1 update/giây vào Postgres
 
 # 2. Dựng stack (postgres, kafka, debezium, đăng ký connector, consumer)
-docker compose -f com/tm/docker/ironman/docker-compose.yml up -d
+docker compose -f com/tm/docker/ironman/docker-compose.yml --profile consumer up -d
 
 # 3. Tạo thay đổi rồi xem event
 docker exec ironman-postgres psql -U ironman -d ironman -c "UPDATE orders SET status='PAID' WHERE id=1"
