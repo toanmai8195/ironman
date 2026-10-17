@@ -17,7 +17,7 @@
 # Thử nghiệm 3 — star-rock-bitmap (profile `bitmap`, độc lập, không cần stack Debezium/Flink): StarRocks + MongoDB cho benchmark bitmap
 #   docker compose -f com/tm/docker/ironman/docker-compose.yml --profile bitmap up -d --no-deps \
 #     starrocks-bitmap mongo-bitmap mongo-exporter-bitmap prometheus-bitmap grafana-bitmap   # --no-deps: postgres/kafka/... không có profile nên sẽ bị kéo theo
-#   Giới hạn: starrocks 3 CPU/6GB · mongo 3 CPU/6GB · service (profile bench) 2 CPU/3GB. Chạy cả bộ: com/tm/star-rock-bitmap/run_all.sh
+#   Giới hạn: starrocks 6 CPU/8GB · mongo 3 CPU/6GB · service (profile bench) 2 CPU/3GB. Chạy cả bộ: com/tm/star-rock-bitmap/run_all.sh
 #   Grafana http://localhost:23000 (dashboard bitmap-bench) · Prometheus http://localhost:29090
 #   bazel run //com/tm/star-rock-bitmap:bench -- all --tags 3 --universe 1000000 \
 #     --sr 'jdbc:mysql://127.0.0.1:29030/?sessionVariables=query_timeout=7200' --mongo mongodb://127.0.0.1:37017
@@ -302,9 +302,9 @@ services:
     image: starrocks/allin1-ubuntu:3.5.8
     container_name: ironman-starrocks-bitmap
     profiles: ["bitmap"]
-    cpus: 3
-    mem_limit: 6g
-    memswap_limit: 6g
+    cpus: 6
+    mem_limit: 8g
+    memswap_limit: 8g
     ports: ["29030:9030", "28030:8030"]
     volumes:
       - starrocks-bitmap-data:/data/deploy/starrocks/be/storage

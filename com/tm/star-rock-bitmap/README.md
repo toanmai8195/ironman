@@ -258,7 +258,7 @@ python3 com/tm/docker/ironman/bitmap/docker_stats_exporter.py &   # CPU, RAM, ne
 com/tm/star-rock-bitmap/run_all.sh /tmp/run1                       # load, Mongo rows, Mongo agg, StarRocks
 ```
 
-Giới hạn tài nguyên (đặt trong compose): StarRocks 3 CPU và 6GB, MongoDB 3 CPU và 6GB, service benchmark 2 CPU và 3GB (service chạy trong container `bench-bitmap`, profile `bench`). Grafana http://localhost:23000 (admin/admin, dashboard `bitmap-bench`), Prometheus http://localhost:29090. Muốn chạy lại sạch thì xoá ba volume `ironman_starrocks-bitmap-data`, `ironman_mongo-bitmap-data`, `ironman_prometheus-bitmap-data` rồi `up` lại.
+Giới hạn tài nguyên (đặt trong compose): StarRocks 6 CPU và 8GB, MongoDB 3 CPU và 6GB, service benchmark 2 CPU và 3GB (service chạy trong container `bench-bitmap`, profile `bench`). Grafana http://localhost:23000 (admin/admin, dashboard `bitmap-bench`), Prometheus http://localhost:29090. Muốn chạy lại sạch thì xoá ba volume `ironman_starrocks-bitmap-data`, `ironman_mongo-bitmap-data`, `ironman_prometheus-bitmap-data` rồi `up` lại.
 
 Mỗi lúc chỉ xử lý một tag (bước tag) hoặc một segment (bước segment), và tạo xong cả 30 tag mới sang segment. Chỗ song song duy nhất là bước A4: tải 10 blob tag của cùng một segment từ Mongo bằng 10 luồng.
 
@@ -267,18 +267,19 @@ Mỗi lúc chỉ xử lý một tag (bước tag) hoặc một segment (bước 
 ## Trạng thái hiện tại
 
 - Đã chạy với StarRocks 3.5.8 và MongoDB 7 thật: SQL và bước giải mã bitmap SR hoạt động, cardinality của 600/600 segment khớp giữa ba pipeline, không có OOM.
-- Kết quả lần chạy ngày 17/10/2026 (30 tag, universe 50M, 480M dòng gold, 600 segment, 4000 lần đọc; mỗi tag trung bình 13,5M user), đơn vị ms:
+- Kết quả lần chạy ngày 17/10/2026 (30 tag, universe 50M, 480M dòng gold, 600 segment, 4000 lần đọc; mỗi tag trung bình 13,5M user, mỗi segment trung bình 3,75MB), đơn vị ms. Giới hạn: StarRocks 6 CPU 8GB, Mongo 3 CPU 6GB, service 2 CPU 3GB:
 
 | | Mongo rows | Mongo agg | StarRocks |
 |---|---|---|---|
-| Tag: gold → sẵn sàng (avg / p50 / p90 / p99) | 2790 / 2730 / 3430 / 3850 | 489 / 492 / 551 / 825 | 705 / 690 / 832 / 1050 |
-| Segment: avg / p50 / p90 / p99 | 108 / 105 / 145 / 201 | 102 / 100 / 135 / 199 | 108 / 103 / 119 / 214 |
-| Contains: avg / p50 / p90 / p99 | 15,0 / 12,2 / 35,5 / 57,9 | 13,5 / 11,6 / 30,7 / 49,9 | 10,8 / 8,9 / 16,4 / 26,9 |
-| Lấy 1000 user: avg / p50 / p90 / p99 | 14,3 / 11,7 / 34,5 / 57,1 | 12,7 / 11,4 / 30,1 / 48,8 | 9,0 / 8,5 / 10,8 / 17,6 |
+| Tag: gold → sẵn sàng (avg / p50 / p90 / p99) | 2780 / 2790 / 3400 / 3420 | 333 / 290 / 379 / 940 | 400 / 366 / 478 / 768 |
+| Segment: avg / p50 / p90 / p99 | 108 / 104 / 149 / 208 | 94,3 / 91,2 / 130 / 164 | 115 / 103 / 137 / 316 |
+| Contains: avg / p50 / p90 / p99 | 14,7 / 11,9 / 34,6 / 56,5 | 10,7 / 9,3 / 23,6 / 38,0 | 10,5 / 8,3 / 16,5 / 26,9 |
+| Lấy 1000 user: avg / p50 / p90 / p99 | 14,1 / 11,6 / 34,0 / 56,2 | 9,9 / 9,2 / 22,6 / 37,3 | 9,1 / 8,4 / 11,2 / 18,0 |
 | Size mỗi tag / segment (MB) | 6,26 / 3,75 | giống | giống |
-| Tổng thời gian chạy | 265s | 181s | 230s |
+| Tổng thời gian chạy | 264s | 151s | 227s |
 
-  Tag nhanh nhất là Mongo agg, chậm nhất là Mongo rows (phải kéo từng user về service). Tạo segment ba bên gần ngang nhau. Khi đọc, StarRocks nhanh hơn, nhất là phần đuôi (p99 17,6 so với 48 đến 57ms).
-- Tài nguyên (đỉnh), service / Mongo / StarRocks: Mongo rows CPU 2,08 / 0,77 / 3,12 core, RAM 1,5 / 2,4 / 3,1GB; Mongo agg CPU 2,07 / 0,94 / 2,51, RAM 1,9 / 2,5 / 3,7GB; StarRocks CPU 0,95 / 0,41 / 3,04, RAM 1,9 / 2,5 / 5,2GB. Mongo gửi khoảng 67 đến 68GB về service trong cả hai lần chạy Mongo, còn pipeline StarRocks gần như không có network giữa các container.
-- Compute của SR là cả câu SQL, của Mongo chỉ là bước AND/OR/NOT trong service. Size SR là ước lượng từ `bitmap_to_base64`.
+  Tag: Mongo agg và StarRocks nhanh hơn nhiều so với Mongo rows (phải kéo từng user về service). Tạo segment: ba pipeline gần ngang nhau, khoảng 100ms. Đọc: StarRocks nhanh nhất, rõ nhất ở p99.
+- StarRocks 3 CPU và 6GB so với 6 CPU và 8GB (p50): tag SR 690ms xuống 366ms, tag Mongo agg 492ms xuống 290ms, trong khi segment SR vẫn khoảng 103ms và đọc không đổi. Với 3 CPU, StarRocks chạm trần CPU 43% thời gian ở bước tag; với 6 CPU không lúc nào chạm trần (đỉnh 3,98 core). Bước segment không phụ thuộc CPU, mỗi segment là một câu SQL có chi phí cố định (lập kế hoạch, 10 subquery đọc `tag_bitmap`, commit `INSERT`), và đây là suy luận, chưa đo tách riêng. Mongo rows không đổi vì nghẽn ở service (một luồng đọc và build bitmap).
+- Tài nguyên đỉnh (6 CPU và 8GB), service / Mongo / StarRocks: Mongo rows CPU 2,11 / 0,82 / 5,70 core, RAM 1,3 / 2,4 / 3,2GB; Mongo agg CPU 2,04 / 0,76 / 4,22, RAM 1,4 / 2,5 / 3,7GB; pipeline StarRocks CPU 0,95 / 0,46 / 3,98, RAM 1,4 / 2,5 / 6,0GB. Mongo gửi khoảng 67 đến 68GB về service trong hai lần chạy Mongo, còn pipeline StarRocks gần như không có network giữa các container.
+- Compute của SR là cả câu SQL, của Mongo chỉ là bước AND/OR/NOT trong service. Size SR là ước lượng từ `bitmap_to_base64`. Mỗi pipeline chỉ chạy một lần, nên chênh lệch nhỏ giữa các lần (ví dụ Mongo agg đọc nhanh hơn một chút ở vòng này) có thể là nhiễu giữa các lần chạy.
 - Đã thêm 3 dependency vào `MODULE.bazel` và pin lại `maven_install.json`: `RoaringBitmap:1.3.0`, `mongodb-driver-sync:5.2.1`, `mysql-connector-j:8.4.0`.
