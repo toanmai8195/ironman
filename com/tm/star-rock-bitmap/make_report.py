@@ -1,116 +1,175 @@
 #!/usr/bin/env python3
-"""Tổng hợp các report từng bước trong report/<limited|unlimited>/*.json thành report/REPORT.md.
+"""Tổng hợp kết quả thô trong report/<limited|unlimited>/*.json thành:
+
+  report/test1-tag-rows-vs-agg.md      Test 1: tag gold -> rows -> Mongo so với gold -> agg -> Mongo
+  report/test2-tag-agg-vs-sr.md        Test 2: tag gold -> agg -> Mongo so với gold -> bitmap trong StarRocks
+  report/test3-segment.md              Test 3: tính segment từ tag trong Mongo so với trong StarRocks
+  report/test4-getall.md               Test 4: lấy toàn bộ user của segment từ Mongo so với từ StarRocks
+  report/REPORT.md                     Report tổng và khuyến nghị (chèn thêm report/recommendation.md nếu có)
 
 Chạy: python3 com/tm/star-rock-bitmap/make_report.py
 """
 import json
-import re
 from pathlib import Path
 
 REPORT = Path(__file__).resolve().parent / "report"
-MODES = [("limited", "Có giới hạn (SR 6 CPU/8GB, Mongo 3 CPU/6GB, service 2 CPU/3GB)"),
-         ("unlimited", "Không giới hạn (SR, Mongo, service dùng tối đa 10 core, RAM không giới hạn)")]
+MODES = [("limited", "Có giới hạn tài nguyên (StarRocks 6 CPU/8GB, Mongo 3 CPU/6GB, service 2 CPU/3GB)"),
+         ("unlimited", "Không giới hạn (StarRocks, Mongo, service dùng tối đa 10 core, RAM không giới hạn)")]
 
-# (mã bài toán, file, tên bước chính, nhãn, đơn vị trên mỗi thao tác)
-CASES = [
-    ("1.1", "1.1-tag-mongo-rows", "A tag total: gold -> mongo", "Mongo rows (đọc gold rows, lưu Mongo)", "tag"),
-    ("1.2", "1.2-tag-mongo-agg-g1", "A tag total: gold -> mongo", "Mongo agg (đọc gold agg bitmap, lưu Mongo)", "tag"),
-    ("1.3", "1.3-tag-sr", "B tag total: gold -> sr", "StarRocks (gold -> bitmap tag trong SR)", "tag"),
-    ("2.1", "2.1-segment-mongo", "A total (fetch+compute+store)", "Mongo (get 10 tag, and/or/not, ghi Mongo)", "segment"),
-    ("2.2", "2.2-segment-sr", "B total: SQL compute + store", "StarRocks (tính và lưu trong SR)", "segment"),
-    ("3.1", "3.1-getall-mongo", "A get all users: mongo get + iterate", "Mongo (get blob + duyệt hết user)", "lần get"),
-    ("3.2", "3.2-getall-sr", "B get all users: SQL unnest", "StarRocks (SELECT unnest toàn bộ)", "lần get"),
+TESTS = [
+    dict(id="t1", file="test1-tag-rows-vs-agg.md", title="Test 1: tag compute, gold → rows → bitmap Mongo so với gold → agg → bitmap Mongo",
+         desc="Đo từ lúc bắt đầu đọc gold đến lúc tag đã lưu xong trong Mongo (bitmap cắt thành chunk tối đa 8MB, tối đa 10 chunk ghi đồng thời).",
+         unit="tag",
+         cases=[("t1-rows", "A tag total: gold -> mongo", "gold → rows → bitmap → Mongo", "SR trả từng user, service build bitmap"),
+                ("t1-agg", "A tag total: gold -> mongo", "gold → agg → bitmap → Mongo", "SR gom bitmap bằng bitmap_agg, service giải mã")]),
+    dict(id="t2", file="test2-tag-agg-vs-sr.md", title="Test 2: tag compute, gold → agg → bitmap Mongo so với gold → bitmap trong StarRocks",
+         desc="Đo từ lúc bắt đầu đọc gold đến lúc bitmap tag sẵn sàng (lưu xong trong Mongo, hoặc INSERT xong vào bảng bitmap của StarRocks).",
+         unit="tag",
+         cases=[("t2-agg", "A tag total: gold -> mongo", "gold → agg → bitmap → Mongo", "SR gom bitmap, service giải mã rồi ghi chunk Mongo"),
+                ("t2-sr", "B tag total: gold -> sr", "gold → bitmap trong StarRocks", "INSERT ... SELECT bitmap_agg chạy hoàn toàn trong SR")]),
+    dict(id="t3", file="test3-segment.md", title="Test 3: tính segment từ bitmap tag trong Mongo so với trong StarRocks",
+         desc="Đo từ lúc bắt đầu lấy bitmap tag đến lúc segment đã lưu xong. Mỗi segment là and/or/not của 10 tag bất kỳ (segment 5 đến 10 triệu user); Mongo tối đa 10 chunk đọc song song.",
+         unit="segment",
+         cases=[("t3-mongo", "A total (fetch+compute+store)", "tag Mongo → segment Mongo", "tải 10 tag, and/or/not ở service, ghi segment"),
+                ("t3-sr", "B total: SQL compute + store", "tag StarRocks → segment StarRocks", "một câu INSERT ... SELECT bitmap_and/or/andnot trong SR")]),
+    dict(id="t4", file="test4-getall.md", title="Test 4: lấy toàn bộ user của segment từ Mongo so với từ StarRocks",
+         desc="Đo từ lúc bắt đầu get đến lúc service có toàn bộ user của segment (5 đến 10 triệu user).",
+         unit="lần get",
+         cases=[("t4-mongo", "A get all users: mongo get chunks + iterate", "segment Mongo → service", "get chunk, giải mã, duyệt hết user"),
+                ("t4-sr", "B get all users: SQL unnest", "segment StarRocks → service", "SELECT unnest(bitmap_to_array(bm)), trả từng hàng")]),
 ]
-PROBLEMS = [("1", "Bài 1. Thời gian từ đọc gold đến có bitmap tag (mỗi tag 5 đến 10 triệu user)", ["1.1", "1.2", "1.3"]),
-            ("2", "Bài 2. Thời gian tính segment đến khi segment sẵn sàng (segment 5 đến 10 triệu user)", ["2.1", "2.2"]),
-            ("3", "Bài 3. Thời gian lấy toàn bộ user của segment", ["3.1", "3.2"])]
 
 
-def load(mode, f):
-    return json.loads((REPORT / mode / f"{f}.json").read_text())
+def load(mode, case):
+    return json.loads((REPORT / mode / f"{case}.json").read_text())
 
 
-def fmt(x):
+def f(x):
     return f"{x:,.0f}" if x >= 1000 else f"{x:.1f}"
 
 
-def main():
-    data = {m: {c[0]: load(m, c[1]) for c in CASES} for m, _ in MODES}
-    out = ["# Báo cáo benchmark bitmap: Mongo vs StarRocks", ""]
-    # kịch bản
-    lg = (REPORT / "limited" / "logs")
-    tags = [int(x) for x in re.findall(r"card=(\d+)", (lg / "1.1-tag-mongo-rows.log").read_text())]
-    segs = [int(x) for x in re.findall(r"card A=(\d+)", (lg / "2.1-segment-mongo.log").read_text())]
-    a = data["limited"]["3.1"]["notes"]["users_read_a"]
-    b = data["limited"]["3.2"]["notes"]["users_read_b"]
-    out += ["## Kịch bản", "",
-            f"- Gold: 30 tag, 6 attribute, universe 50 triệu user. Mỗi tag {min(tags) / 1e6:.2f} đến {max(tags) / 1e6:.2f} triệu user (trung bình {sum(tags) / len(tags) / 1e6:.2f} triệu).",
-            f"- Segment: {len(segs)} segment, mỗi segment là biểu thức AND/OR/AND NOT trên 10 tag ngẫu nhiên (seed 42), kết quả {min(segs) / 1e6:.2f} đến {max(segs) / 1e6:.2f} triệu user. Cùng các segment cho mọi pipeline.",
-            "- Lấy toàn bộ user: 40 segment mẫu ngẫu nhiên (cùng mẫu cho Mongo và StarRocks). "
-            f"Tổng user đọc được: Mongo {a:,}, StarRocks {b:,}, " + ("khớp nhau." if a == b else "LỆCH NHAU."),
-            "- Mỗi lúc chỉ xử lý một tag (bài 1) hoặc một segment (bài 2); tạo xong cả 30 tag mới sang segment. Mongo tối đa 10 lần get đồng thời (mỗi blob nhỏ hơn 1 chunk 8MB).",
-            "- Mỗi bước chạy một lần trong container service riêng; thứ tự: nhóm 1 (1.1, 1.2), nhóm 2 (1.2, 2.1, 3.1), nhóm 3 (1.3, 2.2, 3.2); xoá hết data giữa các nhóm.",
-            "- Thời gian đo bằng benchmark (avg, p50, p90, p99, ms). CPU (core), RAM và network lấy từ `docker stats` lấy mẫu trong từng bước.",
-            ""]
-    for m, lab in MODES:
-        out += [f"- **{m}**: {lab}"]
-    out += [""]
-    # kích thước blob Mongo (bitmap roaring) của tag và segment
-    tb = [float(x) for x in re.findall(r"blob=([\d.]+)MB", (lg / "1.1-tag-mongo-rows.log").read_text())]
-    sb = [float(x) for x in re.findall(r"blob=([\d.]+)MB", (lg / "2.1-segment-mongo.log").read_text())]
-    out += [f"- Kích thước bitmap roaring lưu trong Mongo: tag {min(tb):.1f}MB và segment {max(sb):.1f}MB (log chỉ ghi 1 chữ số thập phân; mọi blob đều bằng nhau ở mức này). Tag và segment 5 đến 10 triệu user trên universe 50 triệu đủ dày để roaring dùng bitmap container, nên mọi blob đều gần bằng kích thước tối đa của universe (50 triệu bit, khoảng 6,3MB).", ""]
-    P = lambda m, c: data[m][c]["steps"][next(x for x in CASES if x[0] == c)[2]]["p50_ms"]
-    out += ["## Kết luận nhanh (p50, ms; số có giới hạn / không giới hạn)", "",
-            f"- Bài 1: Mongo rows {fmt(P('limited', '1.1'))} / {fmt(P('unlimited', '1.1'))}, Mongo agg {fmt(P('limited', '1.2'))} / {fmt(P('unlimited', '1.2'))}, StarRocks {fmt(P('limited', '1.3'))} / {fmt(P('unlimited', '1.3'))}. Mongo rows chậm hơn khoảng {P('limited', '1.1') / P('limited', '1.2'):.1f} lần so với agg vì phải kéo từng user về service; StarRocks và Mongo agg gần ngang nhau.",
-            f"- Bài 2: Mongo {fmt(P('limited', '2.1'))} / {fmt(P('unlimited', '2.1'))}, StarRocks {fmt(P('limited', '2.2'))} / {fmt(P('unlimited', '2.2'))}. Hai bên gần ngang nhau; StarRocks ít biến động hơn ở p90 khi có giới hạn. Mongo phải tải khoảng {data['limited']['2.1']['resources']['service']['net_rx_gb'] * 1000 / 300:.0f}MB mỗi segment, StarRocks gần như không có network ra service.",
-            f"- Bài 3: Mongo {fmt(P('limited', '3.1'))} / {fmt(P('unlimited', '3.1'))}, StarRocks {fmt(P('limited', '3.2'))} / {fmt(P('unlimited', '3.2'))}. Mongo nhanh hơn khoảng {P('limited', '3.2') / P('limited', '3.1'):.0f} lần: Mongo trả một blob nén khoảng {data['limited']['3.1']['resources']['service']['net_rx_gb'] * 1000 / 40:.1f}MB, còn StarRocks trả từng user dạng hàng, khoảng {data['limited']['3.2']['resources']['service']['net_rx_gb'] * 1000 / 40:.0f}MB mỗi lần.",
-            "- Bỏ giới hạn tài nguyên dường như chỉ cải thiện bước tag ở 1.2 và 1.3 (khoảng 20 đến 24%, nhưng 1.2 tự dao động khoảng 14% giữa hai lần chạy nên con số này chưa chắc chắn); bài 2 và bài 3 gần như không đổi, nên giới hạn hiện tại không có vẻ là nút thắt của chúng.",
-            ""]
-    for pid, title, ids in PROBLEMS:
-        out += [f"## {title}", ""]
-        for m, lab in MODES:
-            out += [f"### {m}", "", "| Trường hợp | n | avg (ms) | p50 | p90 | p99 | min | max |", "|---|---|---|---|---|---|---|---|"]
-            for cid in ids:
-                c = next(x for x in CASES if x[0] == cid)
-                s = data[m][cid]["steps"][c[2]]
-                out.append(f"| {cid} {c[3]} | {s['n']} | {fmt(s['avg_ms'])} | {fmt(s['p50_ms'])} | {fmt(s['p90_ms'])} | {fmt(s['p99_ms'])} | {fmt(s['min_ms'])} | {fmt(s['max_ms'])} |")
-            out += [""]
-            out += ["Network và tài nguyên (docker stats): network là tổng MB trong bước và MB mỗi thao tác; service = container chạy benchmark.", "",
-                    "| Trường hợp | service rx | service tx | Mongo tx | SR tx | rx service mỗi thao tác (MB) | CPU service avg/max (core) | CPU Mongo avg/max | CPU SR avg/max | RAM max service / Mongo / SR (GB) |",
-                    "|---|---|---|---|---|---|---|---|---|---|"]
-            for cid in ids:
-                c = next(x for x in CASES if x[0] == cid)
-                d = data[m][cid]
-                n = d["steps"][c[2]]["n"]
-                r = d["resources"]
-                sv, mg, sr = r["service"], r["mongo"], r["sr"]
-                out.append(f"| {cid} | {sv['net_rx_gb'] * 1000:,.0f} | {sv['net_tx_gb'] * 1000:,.0f} | {mg['net_tx_gb'] * 1000:,.0f} | {sr['net_tx_gb'] * 1000:,.0f} | "
-                           f"{sv['net_rx_gb'] * 1000 / n:.1f} | {sv['cpu_avg']:.2f} / {sv['cpu_max']:.2f} | {mg['cpu_avg']:.2f} / {mg['cpu_max']:.2f} | "
-                           f"{sr['cpu_avg']:.2f} / {sr['cpu_max']:.2f} | {sv['mem_max_gb']:.1f} / {mg['mem_max_gb']:.1f} / {sr['mem_max_gb']:.1f} |")
-            out += [""]
-        # so sánh limited và unlimited của bước chính
-        out += ["### So sánh có giới hạn và không giới hạn (p50, ms)", "", "| Trường hợp | có giới hạn | không giới hạn | thay đổi |", "|---|---|---|---|"]
-        for cid in ids:
-            c = next(x for x in CASES if x[0] == cid)
-            x = data["limited"][cid]["steps"][c[2]]["p50_ms"]
-            y = data["unlimited"][cid]["steps"][c[2]]["p50_ms"]
-            out.append(f"| {cid} {c[3]} | {fmt(x)} | {fmt(y)} | {(y / x - 1) * 100:+.0f}% |")
-        out += [""]
-    # lặp lại 1.2 để kiểm tra độ ổn định
-    out += ["## Độ ổn định: bài 1.2 chạy hai lần (nhóm 1 và nhóm 2), p50 ms", "", "| chế độ | nhóm 1 | nhóm 2 |", "|---|---|---|"]
+def mb(gb):
+    return gb * 1000
+
+
+def check_lines(t, data):
+    out = []
+    if t["id"] == "t3":
+        for m, _ in MODES:
+            a = data[m]["t3-mongo"]["notes"]["segment_users_a"]
+            b = data[m]["t3-sr"]["notes"]["segment_users_b"]
+            n = data[m]["t3-mongo"]["steps"][t["cases"][0][1]]["n"]
+            out.append(f"- {m}: tổng số user của {n} segment: Mongo {a:,}, StarRocks {b:,}, " + ("khớp nhau." if a == b else "LỆCH NHAU."))
+    elif t["id"] == "t4":
+        for m, _ in MODES:
+            a = data[m]["t4-mongo"]["notes"]["users_read_a"]
+            b = data[m]["t4-sr"]["notes"]["users_read_b"]
+            out.append(f"- {m}: tổng số user đọc được: Mongo {a:,}, StarRocks {b:,}, " + ("khớp nhau." if a == b else "LỆCH NHAU."))
+    else:
+        out.append("- Số user trong từng tag được in trong log lúc chạy (`report/<chế độ>/logs/`); gold giống nhau giữa các case.")
+    return out
+
+
+def takeaways(t, data):
+    (c1, s1, n1, _), (c2, s2, n2, _) = t["cases"]
+    out = []
     for m, _ in MODES:
-        g1 = load(m, "1.2-tag-mongo-agg-g1")["steps"]["A tag total: gold -> mongo"]["p50_ms"]
-        g2 = load(m, "1.2-tag-mongo-agg-g2")["steps"]["A tag total: gold -> mongo"]["p50_ms"]
-        out.append(f"| {m} | {fmt(g1)} | {fmt(g2)} |")
-    out += ["", "## Lưu ý về độ tin cậy", "",
-            "- Mỗi bước chạy một lần cho mỗi chế độ, nên chênh lệch nhỏ (dưới khoảng 15%, xem độ ổn định của 1.2 ở trên) có thể là nhiễu giữa các lần chạy.",
-            "- CPU, RAM, network lấy từ `docker stats` mỗi 1 đến 2 giây. Với bước ngắn (bài 1.2 và 1.3 chỉ khoảng 8 đến 12 giây) chỉ có vài mẫu, nên CPU max và RAM max thô hơn; network của docker stats có độ phân giải khoảng MB.",
-            "- Network của container Mongo, SR là tổng lưu lượng mọi kết nối của container đó (kể cả exporter Prometheus, rất nhỏ). Ở chế độ không giới hạn, các container tranh chung 10 core và RAM của Docker với nhau, nhưng các bước chạy tuần tự nên không chạy đồng thời.",
-            "- Compute của StarRocks (bài 2.2) là cả câu SQL gồm tính và ghi; không tách riêng được tính toán và ghi. Với Mongo, 2.1 gồm tải 10 tag, tính, serialize và ghi.",
-            "- Size bitmap trên StarRocks không được đo trong lượt này.",
-            "", "## Chi tiết các bước con", "", "Xem `report/<chế độ>/report-g1.md`, `report-g2.md`, `report-g3.md` (từng bước con như A1 đến A7, B1) và các file `.json` kèm log trong `logs/`.", ""]
+        a = data[m][c1]["steps"][s1]
+        b = data[m][c2]["steps"][s2]
+        fast = c1 if a["p50_ms"] <= b["p50_ms"] else c2
+        ratio = max(a["p50_ms"], b["p50_ms"]) / min(a["p50_ms"], b["p50_ms"])
+        ra = mb(data[m][c1]["resources"]["service"]["net_rx_gb"]) / a["n"]
+        rb = mb(data[m][c2]["resources"]["service"]["net_rx_gb"]) / b["n"]
+        out.append(f"- {m}: p50 {c1} = {f(a['p50_ms'])}ms, {c2} = {f(b['p50_ms'])}ms; **{fast}** nhanh hơn khoảng {ratio:.1f} lần ở p50 "
+                   f"(p99: {f(a['p99_ms'])}ms so với {f(b['p99_ms'])}ms). Service nhận {ra:.1f}MB so với {rb:.1f}MB mỗi {t['unit']}.")
+    return out
+
+
+def test_md(t, data):
+    n_label = t["unit"]
+    first = t["cases"][0]
+    n = data["limited"][first[0]]["steps"][first[1]]["n"]
+    out = [f"# {t['title']}", "", t["desc"], "", "## Kịch bản", "",
+           "- Gold giống nhau cho mọi test: 50 tag, 10 attribute, universe 50 triệu user, mỗi tag 5 đến 10 triệu user.",
+           f"- Số lần đo mỗi case: {n} {n_label}. Mỗi case chạy một lần cho mỗi chế độ, trong container service riêng.",
+           "- Mongo: bitmap lưu thành chunk tối đa 8MB, tối đa 10 chunk đọc hoặc ghi đồng thời. StarRocks: bitmap native.",
+           "- CPU (core), RAM, network lấy từ `docker stats` mỗi 1 đến 2 giây trong lúc case chạy. Network là tổng của cả case, kèm mỗi lần đo.", ""]
+    for m, label in MODES:
+        out += [f"## {m}", "", f"*{label}*", "", "### Latency (ms)", "",
+                "| Case | Mô tả | n | avg | p50 | p90 | p99 | min | max |", "|---|---|---|---|---|---|---|---|---|"]
+        for cid, step, name, how in t["cases"]:
+            s = data[m][cid]["steps"][step]
+            out.append(f"| {cid} | {name}: {how} | {s['n']} | {f(s['avg_ms'])} | {f(s['p50_ms'])} | {f(s['p90_ms'])} | {f(s['p99_ms'])} | {f(s['min_ms'])} | {f(s['max_ms'])} |")
+        out += ["", "### Network và tài nguyên", "",
+                f"| Case | service rx (MB) | service tx (MB) | Mongo tx (MB) | SR tx (MB) | service rx mỗi {n_label} (MB) | service tx mỗi {n_label} (MB) |",
+                "|---|---|---|---|---|---|---|"]
+        for cid, step, _, _ in t["cases"]:
+            d = data[m][cid]
+            k = d["steps"][step]["n"]
+            r = d["resources"]
+            out.append(f"| {cid} | {mb(r['service']['net_rx_gb']):,.0f} | {mb(r['service']['net_tx_gb']):,.0f} | {mb(r['mongo']['net_tx_gb']):,.0f} | "
+                       f"{mb(r['sr']['net_tx_gb']):,.0f} | {mb(r['service']['net_rx_gb']) / k:.1f} | {mb(r['service']['net_tx_gb']) / k:.1f} |")
+        out += ["", "| Case | CPU service avg / max (core) | CPU Mongo avg / max | CPU StarRocks avg / max | RAM max service / Mongo / StarRocks (GB) | thời gian chạy (s) |",
+                "|---|---|---|---|---|---|"]
+        for cid, step, _, _ in t["cases"]:
+            d = data[m][cid]
+            r = d["resources"]
+            out.append(f"| {cid} | {r['service']['cpu_avg']:.2f} / {r['service']['cpu_max']:.2f} | {r['mongo']['cpu_avg']:.2f} / {r['mongo']['cpu_max']:.2f} | "
+                       f"{r['sr']['cpu_avg']:.2f} / {r['sr']['cpu_max']:.2f} | {r['service']['mem_max_gb']:.1f} / {r['mongo']['mem_max_gb']:.1f} / {r['sr']['mem_max_gb']:.1f} | {d['wall_seconds']:.0f} |")
+        out += [""]
+        for cid, step, _, _ in t["cases"]:
+            subs = [k for k in data[m][cid]["steps"] if k != step]
+            if subs:
+                out += [f"Các bước con của {cid} (ms):", "", "| bước | n | avg | p50 | p90 | p99 |", "|---|---|---|---|---|---|"]
+                for k in subs:
+                    s = data[m][cid]["steps"][k]
+                    out.append(f"| {k} | {s['n']} | {f(s['avg_ms'])} | {f(s['p50_ms'])} | {f(s['p90_ms'])} | {f(s['p99_ms'])} |")
+                out += [""]
+    out += ["## So sánh có giới hạn và không giới hạn (ms)", "", "| Case | chỉ số | có giới hạn | không giới hạn | thay đổi |", "|---|---|---|---|---|"]
+    for cid, step, _, _ in t["cases"]:
+        for key, lab in (("avg_ms", "avg"), ("p50_ms", "p50"), ("p90_ms", "p90"), ("p99_ms", "p99")):
+            x = data["limited"][cid]["steps"][step][key]
+            y = data["unlimited"][cid]["steps"][step][key]
+            out.append(f"| {cid} | {lab} | {f(x)} | {f(y)} | {(y / x - 1) * 100:+.0f}% |")
+    out += ["", "## Kiểm tra tính đúng", ""] + check_lines(t, data) + ["", "## Nhận xét", ""] + takeaways(t, data) + [""]
+    return "\n".join(out)
+
+
+def main():
+    data = {m: {} for m, _ in MODES}
+    for t in TESTS:
+        for cid, *_ in t["cases"]:
+            for m, _ in MODES:
+                data[m][cid] = load(m, cid)
+    for t in TESTS:
+        (REPORT / t["file"]).write_text(test_md(t, data))
+    out = ["# Báo cáo tổng: Mongo và StarRocks cho bài toán segmentation", "",
+           "Report từng test: " + ", ".join(f"[{t['file']}]({t['file']})" for t in TESTS) + ". Số liệu thô: `report/limited/` và `report/unlimited/`.", "",
+           "## Kịch bản chung", "",
+           "- Gold: 50 tag, 10 attribute, universe 50 triệu user, mỗi tag 5 đến 10 triệu user, cùng bảng gold cho mọi test.",
+           "- Segment: 300 segment, mỗi segment là and/or/not của 10 tag bất kỳ (seed 42), kết quả 5 đến 10 triệu user; cùng các segment cho Mongo và StarRocks.",
+           "- Mongo: bitmap lưu thành chunk tối đa 8MB, tối đa 10 chunk đọc hoặc ghi đồng thời. StarRocks: bitmap native.",
+           "- Hai chế độ: có giới hạn (StarRocks 6 CPU/8GB, Mongo 3 CPU/6GB, service 2 CPU/3GB) và không giới hạn.", ""]
+    for key, ttl in (("p50_ms", "p50"), ("p90_ms", "p90"), ("p99_ms", "p99"), ("avg_ms", "avg")):
+        out += [f"## Latency {ttl} (ms)", "", "| Test | Case | có giới hạn | không giới hạn |", "|---|---|---|---|"]
+        for t in TESTS:
+            for cid, step, name, _ in t["cases"]:
+                out.append(f"| {t['id'][1]} | {cid}: {name} | {f(data['limited'][cid]['steps'][step][key])} | {f(data['unlimited'][cid]['steps'][step][key])} |")
+        out += [""]
+    out += ["## Network mỗi lần đo và tài nguyên (có giới hạn)", "",
+            "| Test | Case | service rx mỗi lần (MB) | service tx mỗi lần (MB) | CPU service avg (core) | CPU StarRocks avg | CPU Mongo avg | RAM max StarRocks (GB) |", "|---|---|---|---|---|---|---|---|"]
+    for t in TESTS:
+        for cid, step, name, _ in t["cases"]:
+            d = data["limited"][cid]
+            k = d["steps"][step]["n"]
+            r = d["resources"]
+            out.append(f"| {t['id'][1]} | {cid} | {mb(r['service']['net_rx_gb']) / k:.1f} | {mb(r['service']['net_tx_gb']) / k:.1f} | "
+                       f"{r['service']['cpu_avg']:.2f} | {r['sr']['cpu_avg']:.2f} | {r['mongo']['cpu_avg']:.2f} | {r['sr']['mem_max_gb']:.1f} |")
+    out += [""]
+    rec = REPORT / "recommendation.md"
+    out += [rec.read_text() if rec.exists() else "## Khuyến nghị\n\n(chưa có)\n", ""]
     (REPORT / "REPORT.md").write_text("\n".join(out))
-    print("đã ghi", REPORT / "REPORT.md")
+    print("đã ghi", ", ".join(t["file"] for t in TESTS), "và REPORT.md")
 
 
 if __name__ == "__main__":

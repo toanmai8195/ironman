@@ -254,26 +254,30 @@ docker compose -f com/tm/docker/ironman/docker-compose.yml --profile bitmap up -
   starrocks-bitmap mongo-bitmap mongo-exporter-bitmap prometheus-bitmap grafana-bitmap
 bazel build //com/tm/star-rock-bitmap:bench_deploy.jar
 cp bazel-bin/com/tm/star-rock-bitmap/bench_deploy.jar com/tm/docker/ironman/bitmap/bench.jar
-python3 com/tm/docker/ironman/bitmap/docker_stats_exporter.py &   # tuỳ chọn: CPU, RAM, network lên Grafana
+python3 com/tm/docker/ironman/bitmap/docker_stats_exporter.py &   # CPU, RAM, network theo container lên Grafana
 python3 com/tm/star-rock-bitmap/bench_runner.py --mode limited     # giới hạn mặc định trong compose
 python3 com/tm/star-rock-bitmap/bench_runner.py --mode unlimited   # bỏ giới hạn StarRocks, Mongo, service
-python3 com/tm/star-rock-bitmap/make_report.py                     # tổng hợp thành report/REPORT.md
+python3 com/tm/star-rock-bitmap/make_report.py                     # report từng test và report tổng
+python3 com/tm/docker/ironman/bitmap/make_dashboard.py             # sinh lại dashboard Grafana (nếu sửa)
 ```
 
-Giới hạn mặc định (đổi bằng biến môi trường `SR_CPUS`/`SR_MEM`, `MONGO_CPUS`/`MONGO_MEM`, `BENCH_CPUS`/`BENCH_MEM`; không giới hạn là CPUS=10 và MEM=0): StarRocks 6 CPU 8GB, MongoDB 3 CPU 6GB, service benchmark 2 CPU 3GB (service chạy trong container `bench-bitmap`, profile `bench`). Grafana http://localhost:23000 (admin/admin, dashboard `bitmap-bench`), Prometheus http://localhost:29090.
+Giới hạn mặc định (đổi bằng biến môi trường `SR_CPUS`/`SR_MEM`, `MONGO_CPUS`/`MONGO_MEM`, `BENCH_CPUS`/`BENCH_MEM`; không giới hạn là CPUS=10 và MEM=0): StarRocks 6 CPU 8GB, MongoDB 3 CPU 6GB, service benchmark 2 CPU 3GB (service chạy trong container `bench-bitmap`, profile `bench`). Grafana http://localhost:23000 (admin/admin, dashboard `bitmap-bench`, chọn biến Chế độ limited hoặc unlimited), Prometheus http://localhost:29090.
 
-## 3 bài toán đo (`bench_runner.py`)
+## 4 test (`bench_runner.py`)
 
-1. Thời gian từ đọc gold đến có bitmap tag (mỗi tag 5 đến 10 triệu user): 1.1 Mongo rows, 1.2 Mongo agg, 1.3 StarRocks.
-2. Thời gian tính segment (kết quả 5 đến 10 triệu user): 2.1 Mongo (get 10 tag, and/or/not, ghi Mongo; tối đa 10 get đồng thời), 2.2 StarRocks.
-3. Thời gian lấy toàn bộ user của segment: 3.1 Mongo, 3.2 StarRocks.
+Cùng bảng gold cho mọi test: 50 tag, 10 attribute, universe 50 triệu user, mỗi tag 5 đến 10 triệu user. Bitmap trong Mongo lưu thành chunk tối đa 8MB (`--chunk-bytes`), tối đa 10 chunk đọc hoặc ghi đồng thời. Mỗi lúc chỉ xử lý một tag hoặc một segment.
 
-Chạy theo nhóm, mỗi bước có report riêng, xoá data (volume StarRocks và Mongo) giữa các nhóm: nhóm 1 (load gold, 1.1, 1.2), nhóm 2 (load gold, 1.2, 2.1, 3.1), nhóm 3 (load gold, 1.3, 2.2, 3.2). Mỗi lúc chỉ xử lý một tag hoặc một segment, và tạo xong cả 30 tag mới sang segment. Đo avg, p50, p90, p99 và CPU, RAM, network (docker stats). Kết quả từng bước: `report/<limited|unlimited>/` (json, log, `report-g1.md` đến `report-g3.md`); tổng hợp: `report/REPORT.md`.
+1. Test 1: tag gold → rows → bitmap Mongo so với gold → agg → bitmap Mongo (đến khi lưu xong tag trong Mongo).
+2. Test 2: tag gold → agg → bitmap Mongo so với gold → bitmap trong StarRocks (đến khi bitmap sẵn sàng).
+3. Test 3: tính segment (and/or/not của 10 tag bất kỳ, kết quả 5 đến 10 triệu user) từ tag trong Mongo so với trong StarRocks (đến khi lưu xong segment).
+4. Test 4: lấy toàn bộ user của segment từ Mongo so với từ StarRocks (đến khi service có đủ user).
 
-Segment được sinh bằng cách chọn ngẫu nhiên biểu thức AND/OR/AND NOT trên 10 tag và chỉ nhận biểu thức có kích thước kỳ vọng trong khoảng yêu cầu (các tag độc lập theo hash nên kích thước kỳ vọng tính được bằng xác suất). Cờ liên quan: `--pipeline a|b|ab`, `--export rows|agg`, `--min-pct`, `--max-pct`, `--seg-min`, `--seg-max`, `--full-gets`, `--out`. Lệnh: `load`, `etl`, `segment`, `getall`, `run`.
+Mỗi test chạy trên hai chế độ (limited, unlimited). Thứ tự trong một chế độ: reset data, load gold, test 1, xoá data; reset, load gold, test 2, 3, 4 liền nhau trên cùng data. Đo avg, p50, p90, p99 và CPU, RAM, network (docker stats). Kết quả thô: `report/<limited|unlimited>/` (json mỗi case, log); report từng test: `report/test1-tag-rows-vs-agg.md`, `test2-tag-agg-vs-sr.md`, `test3-segment.md`, `test4-getall.md`; report tổng và khuyến nghị: `report/REPORT.md`.
+
+Segment được sinh bằng cách chọn ngẫu nhiên biểu thức AND/OR/AND NOT trên 10 tag và chỉ nhận biểu thức có kích thước kỳ vọng trong khoảng yêu cầu (các tag độc lập theo hash nên kích thước kỳ vọng tính được bằng xác suất). Cờ liên quan: `--pipeline a|b|ab`, `--export rows|agg`, `--min-pct`, `--max-pct`, `--seg-min`, `--seg-max`, `--full-gets`, `--chunk-bytes`, `--test`, `--limits`, `--case`, `--out`. Lệnh: `load`, `etl`, `segment`, `getall`, `run`.
 
 ## Trạng thái hiện tại
 
-- Đã chạy với StarRocks 3.5.8 và MongoDB 7 thật, hai lượt (có giới hạn và không giới hạn). Số user đọc được ở Mongo và StarRocks khớp nhau, không có OOM.
-- Kết quả chi tiết và kết luận: `report/REPORT.md`. Tóm tắt (p50, ms, có giới hạn): tag Mongo rows 1705, Mongo agg 261, StarRocks 268; segment Mongo 101, StarRocks 104; lấy toàn bộ user Mongo 41, StarRocks 1388.
+- Đã chạy 4 test trên StarRocks 3.5.8 và MongoDB 7 thật, hai chế độ. Số user ở Mongo và StarRocks khớp nhau (test 3 và 4), không có OOM.
+- Kết quả (p50, ms; có giới hạn / không giới hạn): tag Mongo rows 1692 / 1692, Mongo agg 233 / 172, StarRocks 279 / 210; segment Mongo 180 / 154, StarRocks 105 / 105; lấy toàn bộ user Mongo 47 / 40, StarRocks 1378 / 1408. Kết luận: StarRocks tính segment (nhanh hơn, không tốn network), Mongo phục vụ lấy toàn bộ user (nhanh hơn khoảng 30 lần); không dùng gold → rows. Chi tiết và khuyến nghị: `report/REPORT.md`.
 - Đã thêm 3 dependency vào `MODULE.bazel` và pin lại `maven_install.json`: `RoaringBitmap:1.3.0`, `mongodb-driver-sync:5.2.1`, `mysql-connector-j:8.4.0`.

@@ -22,15 +22,17 @@ public final class Main {
     Config cfg = Config.parse(args, 1);
     Stats st = new Stats();
     st.mode = cfg.runA() ? cfg.export() : "sr";
+    st.test = cfg.test();
+    st.limits = cfg.limits();
+    st.caseName = cfg.caseName();
     st.serve(Integer.parseInt(System.getenv().getOrDefault("BENCH_METRICS_PORT", "9464")));
     long start = System.nanoTime();
     try (Connection c = DriverManager.getConnection(cfg.srUrl(), cfg.srUser(), cfg.srPassword());
-        MongoStore mg = new MongoStore(cfg.mongoUri(), cfg.mongoDb())) {
+        MongoStore mg = new MongoStore(cfg.mongoUri(), cfg.mongoDb(), cfg.chunkBytes())) {
       switch (cmd) {
         case "load" -> Sr.load(c, cfg, st);
         case "etl" -> Bench.etl(c, mg, cfg, st);
         case "segment" -> Bench.segment(c, mg, cfg, st);
-        case "read" -> Bench.read(c, mg, cfg, st);
         case "getall" -> Bench.getAll(c, mg, cfg, st);
         case "run" -> { // như all nhưng không load lại gold
           Bench.etl(c, mg, cfg, st);
@@ -41,7 +43,7 @@ public final class Main {
           Sr.load(c, cfg, st);
           Bench.etl(c, mg, cfg, st);
           Bench.segment(c, mg, cfg, st);
-          Bench.read(c, mg, cfg, st);
+          Bench.getAll(c, mg, cfg, st);
         }
         default -> throw new IllegalArgumentException("lệnh không hợp lệ: " + cmd);
       }

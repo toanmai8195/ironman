@@ -26,7 +26,11 @@ record Config(
     double segMin,
     double segMax,
     int fullGets,
-    String out) {
+    String out,
+    int chunkBytes,
+    String test,
+    String limits,
+    String caseName) {
 
   /** Chạy pipeline A (Mongo + service). */
   boolean runA() {
@@ -84,7 +88,7 @@ record Config(
         m.getOrDefault("sr-password", ""),
         m.getOrDefault("mongo", "mongodb://127.0.0.1:27017"),
         m.getOrDefault("mongo-db", "bm_bench"),
-        Integer.parseInt(m.getOrDefault("tags", "30")),
+        Integer.parseInt(m.getOrDefault("tags", "50")),
         Integer.parseInt(m.getOrDefault("tags-per-attribute", "5")),
         Integer.parseInt(m.getOrDefault("removed-pct", "5")),
         m.getOrDefault("gold-catalog", ""),
@@ -100,6 +104,10 @@ record Config(
         Double.parseDouble(m.getOrDefault("seg-min", "0.105")),
         Double.parseDouble(m.getOrDefault("seg-max", "0.195")),
         Integer.parseInt(m.getOrDefault("full-gets", "40")),
-        m.getOrDefault("out", ""));
+        m.getOrDefault("out", ""),
+        Integer.parseInt(m.getOrDefault("chunk-bytes", "8000000")),
+        m.getOrDefault("test", ""),
+        m.getOrDefault("limits", ""),
+        m.getOrDefault("case", ""));
   }
 }

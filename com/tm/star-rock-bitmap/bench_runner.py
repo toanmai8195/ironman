@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
-"""Chạy 3 bài toán đo của star-rock-bitmap theo từng nhóm, mỗi bước có report riêng, xoá data giữa các nhóm.
+"""Chạy 4 test của star-rock-bitmap, mỗi test hai chế độ (limited, unlimited).
 
-  1. Tạo bitmap tag từ gold (mỗi tag 5 đến 10 triệu user): 1.1 Mongo rows, 1.2 Mongo agg, 1.3 StarRocks
-  2. Tạo segment (kết quả 5 đến 10 triệu user): 2.1 Mongo (get 10 tag, and/or/not, ghi Mongo), 2.2 StarRocks
-  3. Lấy toàn bộ user của segment: 3.1 Mongo, 3.2 StarRocks
+  Test 1: tag gold -> rows -> bitmap Mongo  so với  gold -> agg -> bitmap Mongo      (tới khi lưu xong tag trong Mongo)
+  Test 2: tag gold -> agg -> bitmap Mongo   so với  gold -> bitmap trong StarRocks   (tới khi bitmap sẵn sàng)
+  Test 3: segment từ tag trong Mongo        so với  segment từ tag trong StarRocks   (tới khi lưu xong segment)
+  Test 4: lấy toàn bộ user của segment từ Mongo so với từ StarRocks                  (tới khi service có đủ user)
 
-Nhóm (cách chạy 2):
-  g1: load gold, 1.1, 1.2                      -> report nhóm, xoá data
-  g2: load gold, 1.2, 2.1, 3.1                 -> report nhóm, xoá data
-  g3: load gold, 1.3, 2.2, 3.2                 -> report nhóm, xoá data
+Cùng gold cho mọi test (50 tag, mỗi tag 5 đến 10 triệu user). Bitmap trong Mongo lưu thành chunk tối đa 8MB,
+tối đa 10 chunk đọc hoặc ghi đồng thời.
+
+Thứ tự trong một chế độ (tiết kiệm chi phí, vẫn mỗi test chạy đủ các case):
+  1. reset data, load gold, test 1 (t1-rows, t1-agg), xoá data
+  2. reset data, load gold, test 2 (t2-agg, t2-sr), rồi test 3 (t3-mongo, t3-sr) và test 4 (t4-mongo, t4-sr) trên cùng data
 
 Dùng (từ thư mục gốc repo):
   python3 com/tm/star-rock-bitmap/bench_runner.py --mode limited      # giới hạn docker hiện tại
   python3 com/tm/star-rock-bitmap/bench_runner.py --mode unlimited    # bỏ giới hạn StarRocks, Mongo, service
+  python3 com/tm/star-rock-bitmap/make_report.py                      # report từng test và report tổng
 
-Cần: bench.jar đã copy vào com/tm/docker/ironman/bitmap/ (xem README). Kết quả: com/tm/star-rock-bitmap/report/<mode>/.
-CPU, RAM, network lấy từ `docker stats` (lấy mẫu mỗi ~1,5s trong từng bước), CPU tính theo core (1.0 = 1 core).
+Cần: bench.jar đã copy vào com/tm/docker/ironman/bitmap/ (xem README). Kết quả thô: com/tm/star-rock-bitmap/report/<mode>/.
+CPU, RAM, network lấy từ `docker stats` (lấy mẫu trong từng case), CPU tính theo core (1.0 = 1 core).
 """
 import argparse
 import json
@@ -42,18 +46,6 @@ LIMITS = {
     "limited": {},  # mặc định trong compose: SR 6 CPU/8GB, Mongo 3 CPU/6GB, service 2 CPU/3GB
     "unlimited": {"SR_CPUS": "10", "SR_MEM": "0", "MONGO_CPUS": "10", "MONGO_MEM": "0", "BENCH_CPUS": "10", "BENCH_MEM": "0"},
 }
-
-# bước chính của từng bài toán
-MAIN_STEP = {
-    "1.1": "A tag total: gold -> mongo",
-    "1.2": "A tag total: gold -> mongo",
-    "1.3": "B tag total: gold -> sr",
-    "2.1": "A total (fetch+compute+store)",
-    "2.2": "B total: SQL compute + store",
-    "3.1": "A get all users: mongo get + iterate",
-    "3.2": "B get all users: SQL unnest",
-}
-
 
 def to_bytes(s):
     m = re.match(r"([\d.]+)\s*([A-Za-z]+)", s.strip())
@@ -153,19 +145,20 @@ def reset_infra(env):
 
 
 def common_args(a):
-    return ["--tags", "30", "--tags-per-attribute", "5", "--universe", str(a.universe), "--min-pct", "10", "--max-pct", "20", "--seg-min", "0.105", "--seg-max", "0.195",
-            "--segments", str(a.segments), "--full-gets", str(a.full_gets), "--reads", "0", "--seed", "42",
-            "--sr", SR_URL, "--mongo", MONGO_URL]
+    return ["--tags", "50", "--tags-per-attribute", "5", "--universe", str(a.universe), "--min-pct", "10", "--max-pct", "20",
+            "--seg-min", "0.105", "--seg-max", "0.195", "--segments", str(a.segments), "--full-gets", str(a.full_gets),
+            "--chunk-bytes", "8000000", "--seed", "42", "--sr", SR_URL, "--mongo", MONGO_URL]
 
 
-def run_phase(a, outdir, env, key, cmd, pipeline, export="agg"):
-    """Chạy 1 bước trong container service, lấy mẫu tài nguyên, ghi <key>.json (kết quả bench + resources)."""
-    name = f"{key}"
-    jpath = outdir / f"{name}.json"
-    logpath = outdir / "logs" / f"{name}.log"
+def run_case(a, outdir, env, test, case, cmd, pipeline, export="agg"):
+    """Chạy 1 case trong container service, lấy mẫu tài nguyên, ghi <case>.json (kết quả bench + resources)."""
+    jpath = outdir / f"{case}.json"
+    logpath = outdir / "logs" / f"{case}.log"
     logpath.parent.mkdir(parents=True, exist_ok=True)
-    args = [cmd] + common_args(a) + ["--pipeline", pipeline, "--export", export, "--out", f"/out/{a.outname or a.mode}/{name}.json"]
-    print(f"== {key}: {cmd} --pipeline {pipeline} --export {export}", flush=True)
+    out_name = a.outname or a.mode
+    args = [cmd] + common_args(a) + ["--pipeline", pipeline, "--export", export, "--test", test, "--limits", a.mode,
+                                     "--case", case, "--out", f"/out/{out_name}/{case}.json"]
+    print(f"== {case}: {cmd} --pipeline {pipeline} --export {export}", flush=True)
     sh(["docker", "rm", "-f", CONTAINERS["service"]], check=False, capture=True)
     base = baseline_counters()
     sampler = Sampler()
@@ -180,11 +173,10 @@ def run_phase(a, outdir, env, key, cmd, pipeline, export="agg"):
     sampler.stop_flag.set()
     sampler.join(timeout=60)
     if r.returncode != 0:
-        raise RuntimeError(f"{key} lỗi (exit {r.returncode}), xem {logpath}")
+        raise RuntimeError(f"{case} lỗi (exit {r.returncode}), xem {logpath}")
     data = json.loads(jpath.read_text())
     summ = sampler.summary()
-    # trừ counter network cũ của container bền
-    for k in ("sr", "mongo"):
+    for k in ("sr", "mongo"):  # trừ counter network cũ của container bền
         s = sampler.samples[k]
         if s and k in base:
             rx = tx = 0.0
@@ -196,41 +188,28 @@ def run_phase(a, outdir, env, key, cmd, pipeline, export="agg"):
             summ[k]["net_rx_gb"], summ[k]["net_tx_gb"] = rx / 1e9, tx / 1e9
     data["resources"] = summ
     data["wall_seconds"] = round(wall, 1)
-    data["key"] = key
+    data["case"] = case
+    data["test"] = test
+    data["limits"] = a.mode
     jpath.write_text(json.dumps(data, indent=1, ensure_ascii=False))
     return data
 
 
-def phase_md(title, data, main_step, n_label):
-    st = data["steps"][main_step]
-    n = st["n"]
-    res = data["resources"]
-    rows = [f"### {title}", "",
-            f"Bước đo: `{main_step}`, n = {n} {n_label}, thời gian chạy {data['wall_seconds']}s", "",
-            "| avg | p50 | p90 | p99 | min | max |", "|---|---|---|---|---|---|",
-            f"| {st['avg_ms']:.1f} | {st['p50_ms']:.1f} | {st['p90_ms']:.1f} | {st['p99_ms']:.1f} | {st['min_ms']:.1f} | {st['max_ms']:.1f} |", "",
-            "Tài nguyên và network trong bước (docker stats):", "",
-            "| container | CPU avg (core) | CPU max | RAM max (GB) | network rx (MB) | network tx (MB) | rx mỗi " + n_label + " (MB) | tx mỗi " + n_label + " (MB) |",
-            "|---|---|---|---|---|---|---|---|"]
-    for k, lab in (("service", "service"), ("mongo", "mongo"), ("sr", "starrocks")):
-        r = res.get(k)
-        if r:
-            rows.append(f"| {lab} | {r['cpu_avg']:.2f} | {r['cpu_max']:.2f} | {r['mem_max_gb']:.2f} | {r['net_rx_gb'] * 1000:.0f} | {r['net_tx_gb'] * 1000:.0f} | "
-                        f"{r['net_rx_gb'] * 1000 / n:.1f} | {r['net_tx_gb'] * 1000 / n:.1f} |")
-    other = [k for k in data["steps"] if k != main_step]
-    if other:
-        rows += ["", "Các bước con (ms):", "", "| bước | n | avg | p50 | p90 | p99 |", "|---|---|---|---|---|---|"]
-        for k in other:
-            s = data["steps"][k]
-            rows.append(f"| {k} | {s['n']} | {s['avg_ms']:.1f} | {s['p50_ms']:.1f} | {s['p90_ms']:.1f} | {s['p99_ms']:.1f} |")
-    rows.append("")
-    return "\n".join(rows)
+def load_gold(a, outdir, env):
+    sh(["docker", "rm", "-f", CONTAINERS["service"]], check=False, capture=True)
+    (outdir / "logs").mkdir(parents=True, exist_ok=True)
+    print("== load gold", flush=True)
+    with open(outdir / "logs" / "load.log", "a") as lf:
+        subprocess.run(["docker", "compose", "-f", str(COMPOSE), "--profile", "bitmap", "--profile", "bench", "run", "--rm", "--no-deps",
+                        "--service-ports", "--name", CONTAINERS["service"], "bench-bitmap", "load"] + common_args(a)
+                       + ["--test", "load", "--limits", a.mode, "--case", "load"],
+                       cwd=ROOT, env={**os.environ, **env}, stdout=lf, stderr=subprocess.STDOUT, check=True)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["limited", "unlimited"], required=True)
-    ap.add_argument("--groups", default="g1,g2,g3")
+    ap.add_argument("--tests", default="t1,t234", help="t1 và/hoặc t234 (test 2, 3, 4 chạy liền trên cùng data)")
     ap.add_argument("--segments", type=int, default=300)
     ap.add_argument("--full-gets", type=int, default=40)
     ap.add_argument("--universe", type=int, default=50000000)
@@ -239,43 +218,23 @@ def main():
     env = LIMITS[a.mode]
     outdir = HERE / "report" / (a.outname or a.mode)
     outdir.mkdir(parents=True, exist_ok=True)
-    groups = a.groups.split(",")
     log = lambda m: print(time.strftime("%H:%M:%S"), m, flush=True)
-
-    def load(env):
-        sh(["docker", "rm", "-f", CONTAINERS["service"]], check=False, capture=True)
-        with open(outdir / "logs" / "load.log", "a") as lf:
-            log("load gold")
-            subprocess.run(["docker", "compose", "-f", str(COMPOSE), "--profile", "bitmap", "--profile", "bench", "run", "--rm", "--no-deps",
-                            "--service-ports", "--name", CONTAINERS["service"], "bench-bitmap", "load"] + common_args(a),
-                           cwd=ROOT, env={**os.environ, **env}, stdout=lf, stderr=subprocess.STDOUT, check=True)
-
-    (outdir / "logs").mkdir(parents=True, exist_ok=True)
-    for g in groups:
+    for g in a.tests.split(","):
         reset_infra(env)
-        load(env)
-        md = [f"## Nhóm {g} ({a.mode})", ""]
-        if g == "g1":
-            d11 = run_phase(a, outdir, env, "1.1-tag-mongo-rows", "etl", "a", "rows")
-            d12 = run_phase(a, outdir, env, "1.2-tag-mongo-agg-g1", "etl", "a", "agg")
-            md += [phase_md("1.1 Mongo rows: đọc gold rows, lưu Mongo", d11, MAIN_STEP["1.1"], "tag"),
-                   phase_md("1.2 Mongo agg: đọc gold agg bitmap, lưu Mongo", d12, MAIN_STEP["1.2"], "tag")]
-        elif g == "g2":
-            d12 = run_phase(a, outdir, env, "1.2-tag-mongo-agg-g2", "etl", "a", "agg")
-            d21 = run_phase(a, outdir, env, "2.1-segment-mongo", "segment", "a")
-            d31 = run_phase(a, outdir, env, "3.1-getall-mongo", "getall", "a")
-            md += [phase_md("1.2 Mongo agg (lần 2, để có tag trong Mongo)", d12, MAIN_STEP["1.2"], "tag"),
-                   phase_md("2.1 Segment trên Mongo: get 10 tag, and/or/not, ghi Mongo", d21, MAIN_STEP["2.1"], "segment"),
-                   phase_md("3.1 Lấy toàn bộ user của segment từ Mongo", d31, MAIN_STEP["3.1"], "lần get")]
-        elif g == "g3":
-            d13 = run_phase(a, outdir, env, "1.3-tag-sr", "etl", "b")
-            d22 = run_phase(a, outdir, env, "2.2-segment-sr", "segment", "b")
-            d32 = run_phase(a, outdir, env, "3.2-getall-sr", "getall", "b")
-            md += [phase_md("1.3 StarRocks: đọc gold, tính bitmap tag, lưu bảng bitmap", d13, MAIN_STEP["1.3"], "tag"),
-                   phase_md("2.2 Segment trên StarRocks: tính và lưu segment", d22, MAIN_STEP["2.2"], "segment"),
-                   phase_md("3.2 Lấy toàn bộ user của segment từ StarRocks", d32, MAIN_STEP["3.2"], "lần get")]
-        (outdir / f"report-{g}.md").write_text("\n".join(md))
-        log(f"xong nhóm {g}, report: {outdir}/report-{g}.md")
+        load_gold(a, outdir, env)
+        if g == "t1":
+            run_case(a, outdir, env, "t1", "t1-rows", "etl", "a", "rows")
+            run_case(a, outdir, env, "t1", "t1-agg", "etl", "a", "agg")
+        elif g == "t234":
+            run_case(a, outdir, env, "t2", "t2-agg", "etl", "a", "agg")
+            run_case(a, outdir, env, "t2", "t2-sr", "etl", "b")
+            run_case(a, outdir, env, "t3", "t3-mongo", "segment", "a")
+            run_case(a, outdir, env, "t3", "t3-sr", "segment", "b")
+            run_case(a, outdir, env, "t4", "t4-mongo", "getall", "a")
+            run_case(a, outdir, env, "t4", "t4-sr", "getall", "b")
+        else:
+            raise SystemExit(f"nhóm không hợp lệ: {g}")
+        log(f"xong {g}")
     reset_infra(env)  # xoá data cuối cùng
     (outdir / "DONE").write_text(time.strftime("%Y-%m-%d %H:%M:%S"))
     log("ALLDONE")

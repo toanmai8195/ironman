@@ -74,4 +74,18 @@ public class SegmentExprTest {
     String set = java.util.Base64.getEncoder().encodeToString(new byte[] {10, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0});
     assertEquals(RoaringBitmap.bitmapOf(1, 2), BitmapCodec.decodeStarRocks(set));
   }
+
+  @Test
+  public void blobSliceAndJoinRoundTrip() {
+    byte[] blob = new byte[20_000_001];
+    new Random(5).nextBytes(blob);
+    java.util.List<byte[]> parts = MongoStore.slice(blob, 8_000_000);
+    assertEquals(3, parts.size());
+    for (byte[] p : parts) {
+      assertTrue(p.length <= 8_000_000);
+    }
+    assertTrue(java.util.Arrays.equals(blob, MongoStore.join(parts)));
+    assertEquals(1, MongoStore.slice(new byte[6_300_000], 8_000_000).size());
+    assertEquals(1, MongoStore.slice(new byte[0], 8_000_000).size());
+  }
 }

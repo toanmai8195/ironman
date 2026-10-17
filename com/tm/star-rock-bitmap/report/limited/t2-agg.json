@@ -1,0 +1,104 @@
+{
+ "meta": {
+  "cmd": "etl",
+  "pipeline": "a",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A1a SR agg+ship": {
+   "n": 50,
+   "avg_ms": 208.914,
+   "min_ms": 118.863,
+   "p50_ms": 207.721,
+   "p90_ms": 251.132,
+   "p99_ms": 436.665,
+   "max_ms": 436.665,
+   "sum_ms": 10445.702
+  },
+  "A1b decode SR bitmap": {
+   "n": 50,
+   "avg_ms": 14.846,
+   "min_ms": 13.596,
+   "p50_ms": 14.197,
+   "p90_ms": 15.213,
+   "p99_ms": 34.162,
+   "max_ms": 34.162,
+   "sum_ms": 742.298
+  },
+  "A1 total: SR -> bitmap": {
+   "n": 50,
+   "avg_ms": 223.847,
+   "min_ms": 133.137,
+   "p50_ms": 221.833,
+   "p90_ms": 266.374,
+   "p99_ms": 474.069,
+   "max_ms": 474.069,
+   "sum_ms": 11192.326
+  },
+  "A2 serialize": {
+   "n": 50,
+   "avg_ms": 9.923,
+   "min_ms": 8.96,
+   "p50_ms": 9.564,
+   "p90_ms": 10.751,
+   "p99_ms": 16.793,
+   "max_ms": 16.793,
+   "sum_ms": 496.142
+  },
+  "A3 mongo put chunks (<=8MB, <=10 parallel)": {
+   "n": 50,
+   "avg_ms": 30.649,
+   "min_ms": 8.107,
+   "p50_ms": 26.938,
+   "p90_ms": 55.43,
+   "p99_ms": 61.794,
+   "max_ms": 61.794,
+   "sum_ms": 1532.448
+  },
+  "A tag total: gold -> mongo": {
+   "n": 50,
+   "avg_ms": 264.418,
+   "min_ms": 170.442,
+   "p50_ms": 258.778,
+   "p90_ms": 306.422,
+   "p99_ms": 517.8,
+   "max_ms": 517.8,
+   "sum_ms": 13220.915
+  }
+ },
+ "notes": {},
+ "resources": {
+  "sr": {
+   "cpu_avg": 3.980757142857143,
+   "cpu_max": 4.7748,
+   "mem_max_gb": 3.583,
+   "net_rx_gb": 0.0002709,
+   "net_tx_gb": 0.40966,
+   "samples": 7
+  },
+  "mongo": {
+   "cpu_avg": 0.2088142857142857,
+   "cpu_max": 0.4702,
+   "mem_max_gb": 0.4658203125,
+   "net_rx_gb": 0.306797,
+   "net_tx_gb": 0.00068,
+   "samples": 7
+  },
+  "service": {
+   "cpu_avg": 0.17754999999999999,
+   "cpu_max": 0.4075,
+   "mem_max_gb": 0.27412109375,
+   "net_rx_gb": 0.343,
+   "net_tx_gb": 0.257,
+   "samples": 6
+  }
+ },
+ "wall_seconds": 14.1,
+ "case": "t2-agg",
+ "test": "t2",
+ "limits": "limited"
+}

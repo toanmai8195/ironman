@@ -9,9 +9,9 @@
  },
  "panels": [
   {
-   "id": 200,
+   "id": 1,
    "type": "row",
-   "title": "Chỉ số chính: trung bình, p50, p90, p99 theo pipeline (mongo-rows · mongo-agg · sr)",
+   "title": "Test 1: tag compute, gold → rows → bitmap Mongo so với gold → agg → bitmap Mongo",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -22,10 +22,10 @@
    "panels": []
   },
   {
-   "id": 201,
+   "id": 2,
    "type": "table",
-   "title": "1. Thời gian xử lý một tag: từ gold đến khi data sẵn sàng trên Mongo hoặc StarRocks",
-   "description": "Đo từ lúc bắt đầu tính tag từ gold đến khi bitmap đã ghi xong và sẵn sàng. mongo-*: SR build/ship + decode/build + serialize + ghi Mongo (A tag total). sr: INSERT ... bitmap_agg (B tag total).",
+   "title": "Latency: avg, p50, p90, p99 (ms) — Latency từ khi bắt đầu đọc gold đến khi tag đã lưu xong trong Mongo (các chunk tối đa 8MB, tối đa 10 chunk ghi đồng thời)",
+   "description": "Latency từ khi bắt đầu đọc gold đến khi tag đã lưu xong trong Mongo (các chunk tối đa 8MB, tối đa 10 chunk ghi đồng thời). t1-rows: SR trả từng user, service build bitmap. t1-agg: SR gom bitmap (bitmap_agg), service giải mã.",
    "datasource": {
     "type": "prometheus"
    },
@@ -33,42 +33,70 @@
     "x": 0,
     "y": 1,
     "w": 24,
-    "h": 7
+    "h": 6
    },
    "fieldConfig": {
     "defaults": {
      "unit": "ms",
      "decimals": 1
     },
-    "overrides": []
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "n"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "short"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     }
+    ]
    },
    "options": {
     "showHeader": true
    },
    "targets": [
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A|B) tag total.*\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A|B) tag total.*\",variant=~\".+\"}[6h]))",
+     "expr": "max by (case) (last_over_time(bench_latency_ms_sum{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\"}[12h])/last_over_time(bench_latency_ms_count{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\"}[12h]))",
+     "legendFormat": "",
+     "refId": "A",
      "instant": true,
-     "format": "table",
-     "refId": "A"
+     "format": "table"
     },
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A|B) tag total.*\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.5\"}[12h]))",
+     "legendFormat": "",
+     "refId": "B",
      "instant": true,
-     "format": "table",
-     "refId": "B"
+     "format": "table"
     },
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A|B) tag total.*\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.9\"}[12h]))",
+     "legendFormat": "",
+     "refId": "C",
      "instant": true,
-     "format": "table",
-     "refId": "C"
+     "format": "table"
     },
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A|B) tag total.*\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.99\"}[12h]))",
+     "legendFormat": "",
+     "refId": "D",
      "instant": true,
-     "format": "table",
-     "refId": "D"
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_count{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\"}[12h]))",
+     "legendFormat": "",
+     "refId": "E",
+     "instant": true,
+     "format": "table"
     }
    ],
    "transformations": [
@@ -83,36 +111,38 @@
        "Time": true
       },
       "renameByName": {
-       "variant": "Pipeline",
+       "case": "Case",
        "Value #A": "avg",
        "Value #B": "p50",
        "Value #C": "p90",
-       "Value #D": "p99"
+       "Value #D": "p99",
+       "Value #E": "n"
       },
       "indexByName": {
-       "variant": 0,
+       "case": 0,
        "Value #A": 1,
        "Value #B": 2,
        "Value #C": 3,
-       "Value #D": 4
+       "Value #D": 4,
+       "Value #E": 5
       }
      }
     }
    ]
   },
   {
-   "id": 202,
-   "type": "table",
-   "title": "2. Thời gian tạo một segment: từ lúc bắt đầu lấy dữ liệu đến khi segment sẵn sàng",
-   "description": "mongo-*: từ lúc tải 10 tag từ Mongo đến khi segment đã ghi xong vào Mongo (fetch + compute + serialize + put). sr: từ lúc gửi câu SQL đến khi segment nằm trong bảng segment_bitmap (B total).",
+   "id": 3,
+   "type": "timeseries",
+   "title": "Latency theo thời gian: avg, p50, p90, p99 (ms)",
+   "description": "Số tích luỹ từ đầu case đến thời điểm đó (avg và phân vị của mọi lần đo tới lúc này).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 8,
-    "w": 24,
-    "h": 7
+    "y": 7,
+    "w": 12,
+    "h": 8
    },
    "fieldConfig": {
     "defaults": {
@@ -121,368 +151,129 @@
     },
     "overrides": []
    },
-   "options": {
-    "showHeader": true
-   },
    "targets": [
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A total.*|B total.*)\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A total.*|B total.*)\",variant=~\".+\"}[6h]))",
-     "instant": true,
-     "format": "table",
+     "expr": "sum by (case) (bench_latency_ms_sum{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\"})/sum by (case) (bench_latency_ms_count{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\"})",
+     "legendFormat": "{{case}} avg",
      "refId": "A"
     },
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A total.*|B total.*)\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
-     "instant": true,
-     "format": "table",
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.5\"})",
+     "legendFormat": "{{case}} p50",
      "refId": "B"
     },
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A total.*|B total.*)\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
-     "instant": true,
-     "format": "table",
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.9\"})",
+     "legendFormat": "{{case}} p90",
      "refId": "C"
     },
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A total.*|B total.*)\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
-     "instant": true,
-     "format": "table",
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.99\"})",
+     "legendFormat": "{{case}} p99",
      "refId": "D"
     }
    ],
-   "transformations": [
-    {
-     "id": "merge",
-     "options": {}
-    },
-    {
-     "id": "organize",
-     "options": {
-      "excludeByName": {
-       "Time": true
-      },
-      "renameByName": {
-       "variant": "Pipeline",
-       "Value #A": "avg",
-       "Value #B": "p50",
-       "Value #C": "p90",
-       "Value #D": "p99"
-      },
-      "indexByName": {
-       "variant": 0,
-       "Value #A": 1,
-       "Value #B": 2,
-       "Value #C": 3,
-       "Value #D": 4
-      }
-     }
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
     }
-   ]
+   }
   },
   {
-   "id": 203,
-   "type": "table",
-   "title": "3. Lấy toàn bộ user của segment (3.1 Mongo, 3.2 StarRocks)",
-   "description": "Thời gian lấy toàn bộ user của một segment (5 đến 10 triệu user). mongo-*: get blob segment từ Mongo + giải mã + duyệt hết user trong service (3.1). sr: SELECT unnest(bitmap_to_array(bm)) đọc toàn bộ hàng về service (3.2). Mỗi pipeline đo trên cùng các segment mẫu.",
+   "id": 4,
+   "type": "timeseries",
+   "title": "Latency trung bình từng bước (ms)",
+   "description": "Trung bình từng bước con của mỗi case (ví dụ A1 SR -> bitmap, A3 ghi chunk Mongo, A4 tải chunk, A5 tính, B1 INSERT trong SR).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 7,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (case, step) (bench_latency_ms_sum{test=\"t1\",limits=\"$limits\",step!~\"(A|B) tag total.*\"})/sum by (case, step) (bench_latency_ms_count{test=\"t1\",limits=\"$limits\",step!~\"(A|B) tag total.*\"})",
+     "legendFormat": "{{case}} · {{step}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "CPU theo container (core)",
+   "description": "CPU thực dùng của StarRocks, MongoDB và service benchmark trong lúc test chạy (docker stats; 1 = 1 core).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
     "y": 15,
-    "w": 24,
-    "h": 7
+    "w": 12,
+    "h": 8
    },
    "fieldConfig": {
     "defaults": {
-     "unit": "ms",
-     "decimals": 1
+     "unit": "short",
+     "decimals": 2
     },
     "overrides": []
    },
-   "options": {
-    "showHeader": true
-   },
    "targets": [
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\"}[6h]))",
-     "instant": true,
-     "format": "table",
+     "expr": "container_cpu_cores{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"} and on() max(bench_phase_active{test=\"t1\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
      "refId": "A"
-    },
-    {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
-     "instant": true,
-     "format": "table",
-     "refId": "B"
-    },
-    {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
-     "instant": true,
-     "format": "table",
-     "refId": "C"
-    },
-    {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
-     "instant": true,
-     "format": "table",
-     "refId": "D"
     }
    ],
-   "transformations": [
-    {
-     "id": "merge",
-     "options": {}
-    },
-    {
-     "id": "organize",
-     "options": {
-      "excludeByName": {
-       "Time": true
-      },
-      "renameByName": {
-       "variant": "Pipeline",
-       "Value #A": "avg",
-       "Value #B": "p50",
-       "Value #C": "p90",
-       "Value #D": "p99"
-      },
-      "indexByName": {
-       "variant": 0,
-       "Value #A": 1,
-       "Value #B": 2,
-       "Value #C": 3,
-       "Value #D": 4
-      }
-     }
-    }
-   ]
-  },
-  {
-   "id": 100,
-   "type": "row",
-   "title": "0. Tổng quan 3 pipeline (mongo rows · mongo agg · sr) — cùng data, cùng tag/attribute, cùng điều kiện và số segment",
-   "collapsed": false,
-   "gridPos": {
-    "x": 0,
-    "y": 22,
-    "w": 24,
-    "h": 1
-   },
-   "panels": []
-  },
-  {
-   "id": 101,
-   "type": "bargauge",
-   "title": "Thời gian xử lý trung bình mỗi tag (gold → store)",
-   "description": "Trung bình thời gian từ gold tới khi bitmap của 1 tag nằm trong đích. mongo-*: SR build/ship + decode/build + serialize + ghi Mongo (A1+A2+A3). sr: một câu INSERT ... bitmap_agg (B1).",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 23,
-    "w": 6,
-    "h": 8
-   },
    "options": {
-    "orientation": "horizontal",
-    "displayMode": "gradient",
-    "reduceOptions": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
      "calcs": [
-      "lastNotNull"
-     ],
-     "values": false
+      "mean",
+      "max"
+     ]
     }
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms",
-     "min": 0
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "sum by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A|B) tag total.*\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_latency_ms_count{step=~\"(A|B) tag total.*\",variant=~\".+\"}[6h]))",
-     "legendFormat": "{{variant}}",
-     "refId": "A",
-     "instant": true
-    }
-   ]
+   }
   },
   {
-   "id": 102,
-   "type": "bargauge",
-   "title": "Thời gian tạo segment trung bình (fetch + compute + store)",
-   "description": "Trung bình thời gian tạo 1 segment trọn vẹn. mongo-*: tải 10 tag + tính trong service + serialize + ghi Mongo. sr: một câu SQL compute và lưu trong SR.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 6,
-    "y": 23,
-    "w": 6,
-    "h": 8
-   },
-   "options": {
-    "orientation": "horizontal",
-    "displayMode": "gradient",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "values": false
-    }
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms",
-     "min": 0
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "sum by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A total.*|B total.*)\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_latency_ms_count{step=~\"(A total.*|B total.*)\",variant=~\".+\"}[6h]))",
-     "legendFormat": "{{variant}}",
-     "refId": "A",
-     "instant": true
-    }
-   ]
-  },
-  {
-   "id": 103,
-   "type": "bargauge",
-   "title": "Thời gian compute segment trung bình (chỉ phần tính)",
-   "description": "Chỉ phần tính toán. mongo-*: A5 AND/OR/NOT trong memory của service (chưa gồm fetch/serialize/ghi). sr: cả câu SQL (SR không tách riêng compute và lưu).",
+   "id": 6,
+   "type": "timeseries",
+   "title": "RAM theo container",
+   "description": "RAM thực dùng của StarRocks, MongoDB và service benchmark trong lúc test chạy (docker stats).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 23,
-    "w": 6,
-    "h": 8
-   },
-   "options": {
-    "orientation": "horizontal",
-    "displayMode": "gradient",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "values": false
-    }
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms",
-     "min": 0
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "sum by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A5 compute.*|B total.*)\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_latency_ms_count{step=~\"(A5 compute.*|B total.*)\",variant=~\".+\"}[6h]))",
-     "legendFormat": "{{variant}}",
-     "refId": "A",
-     "instant": true
-    }
-   ]
-  },
-  {
-   "id": 104,
-   "type": "bargauge",
-   "title": "Size trung bình mỗi tag",
-   "description": "Kích thước bitmap một tag. mongo-*: blob roaring trong Mongo. sr: bitmap SR serialize (bitmap_to_base64 giải ngược về byte). Hai biến thể mongo giống nhau vì cùng dữ liệu.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 18,
-    "y": 23,
-    "w": 6,
-    "h": 8
-   },
-   "options": {
-    "orientation": "horizontal",
-    "displayMode": "gradient",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "values": false
-    }
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "bytes",
-     "min": 0
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "sum by (variant) (last_over_time(bench_size_bytes_sum{kind=\"tag\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_size_bytes_count{kind=\"tag\",variant=~\".+\"}[6h]))",
-     "legendFormat": "{{variant}}",
-     "refId": "A",
-     "instant": true
-    }
-   ]
-  },
-  {
-   "id": 105,
-   "type": "bargauge",
-   "title": "Size trung bình mỗi segment",
-   "description": "Kích thước bitmap một segment, cùng 600 điều kiện segment cho mọi pipeline.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 31,
-    "w": 6,
-    "h": 8
-   },
-   "options": {
-    "orientation": "horizontal",
-    "displayMode": "gradient",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "values": false
-    }
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "bytes",
-     "min": 0
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "sum by (variant) (last_over_time(bench_size_bytes_sum{kind=\"segment\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_size_bytes_count{kind=\"segment\",variant=~\".+\"}[6h]))",
-     "legendFormat": "{{variant}}",
-     "refId": "A",
-     "instant": true
-    }
-   ]
-  },
-  {
-   "id": 106,
-   "type": "timeseries",
-   "title": "Size từng tag (byte)",
-   "description": "Kích thước bitmap của từng tag 01..30 theo pipeline. Tag có tỉ lệ thành viên khác nhau nên size khác nhau.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 6,
-    "y": 31,
-    "w": 18,
+    "y": 15,
+    "w": 12,
     "h": 8
    },
    "fieldConfig": {
@@ -493,17 +284,233 @@
    },
    "targets": [
     {
-     "expr": "last_over_time(bench_tag_size_bytes{variant=~\".+\"}[6h])",
-     "legendFormat": "{{variant}} · tag {{tag}}",
+     "expr": "container_mem_bytes{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"} and on() max(bench_phase_active{test=\"t1\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
      "refId": "A"
     }
-   ]
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
   },
   {
-   "id": 107,
+   "id": 7,
    "type": "timeseries",
-   "title": "Size segment (byte): lần gần nhất / lớn nhất",
-   "description": "Kích thước lớn nhất của một segment cho từng pipeline.",
+   "title": "Network nhận theo container (byte/s)",
+   "description": "Lưu lượng mạng vào từng container trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 23,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(container_net_rx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[10s]) and on() max(bench_phase_active{test=\"t1\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "Network gửi theo container (byte/s)",
+   "description": "Lưu lượng mạng ra từ từng container trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 23,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(container_net_tx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[10s]) and on() max(bench_phase_active{test=\"t1\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 9,
+   "type": "timeseries",
+   "title": "StarRocks: query/s",
+   "description": "Số câu query FE StarRocks nhận mỗi giây trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 31,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(starrocks_fe_query_total[10s]) and on() max(bench_phase_active{test=\"t1\",limits=\"$limits\"})",
+     "legendFormat": "qps",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 10,
+   "type": "timeseries",
+   "title": "MongoDB: operation/s",
+   "description": "Số thao tác Mongo mỗi giây theo loại (insert, query, update, getmore, delete) trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 31,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (legacy_op_type) (rate(mongodb_ss_opcounters{legacy_op_type=~\"insert|query|update|getmore|delete\"}[10s])) and on() max(bench_phase_active{test=\"t1\",limits=\"$limits\"})",
+     "legendFormat": "{{legacy_op_type}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 11,
+   "type": "timeseries",
+   "title": "Service: lượt đo/s",
+   "description": "Số lần thao tác chính (một tag, một segment hoặc một lần get) service hoàn thành mỗi giây.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 31,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (case) (rate(bench_latency_ms_count{test=\"t1\",limits=\"$limits\",step=~\"(A|B) tag total.*\"}[10s]))",
+     "legendFormat": "{{case}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 12,
+   "type": "row",
+   "title": "Test 2: tag compute, gold → agg → bitmap Mongo so với gold → bitmap trong StarRocks",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 38,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 13,
+   "type": "table",
+   "title": "Latency: avg, p50, p90, p99 (ms) — Latency từ khi bắt đầu đọc gold đến khi bitmap tag sẵn sàng",
+   "description": "Latency từ khi bắt đầu đọc gold đến khi bitmap tag sẵn sàng. t2-agg: lưu vào Mongo. t2-sr: INSERT ... bitmap_agg vào bảng bitmap của StarRocks.",
    "datasource": {
     "type": "prometheus"
    },
@@ -515,797 +522,242 @@
    },
    "fieldConfig": {
     "defaults": {
-     "unit": "bytes"
+     "unit": "ms",
+     "decimals": 1
     },
-    "overrides": []
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "n"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "short"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true
    },
    "targets": [
     {
-     "expr": "last_over_time(bench_size_bytes_max{kind=\"segment\",variant=~\".+\"}[6h])",
-     "legendFormat": "max · {{variant}}",
-     "refId": "A"
+     "expr": "max by (case) (last_over_time(bench_latency_ms_sum{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\"}[12h])/last_over_time(bench_latency_ms_count{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\"}[12h]))",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.5\"}[12h]))",
+     "legendFormat": "",
+     "refId": "B",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.9\"}[12h]))",
+     "legendFormat": "",
+     "refId": "C",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.99\"}[12h]))",
+     "legendFormat": "",
+     "refId": "D",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_count{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\"}[12h]))",
+     "legendFormat": "",
+     "refId": "E",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "case": "Case",
+       "Value #A": "avg",
+       "Value #B": "p50",
+       "Value #C": "p90",
+       "Value #D": "p99",
+       "Value #E": "n"
+      },
+      "indexByName": {
+       "case": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4,
+       "Value #E": 5
+      }
+     }
     }
    ]
   },
   {
-   "id": 108,
-   "type": "row",
-   "title": "1. Tính tag bitmap (ETL: gold → bitmap theo tag)",
-   "collapsed": false,
+   "id": 14,
+   "type": "timeseries",
+   "title": "Latency theo thời gian: avg, p50, p90, p99 (ms)",
+   "description": "Số tích luỹ từ đầu case đến thời điểm đó (avg và phân vị của mọi lần đo tới lúc này).",
+   "datasource": {
+    "type": "prometheus"
+   },
    "gridPos": {
     "x": 0,
     "y": 45,
-    "w": 24,
-    "h": 1
-   },
-   "panels": []
-  },
-  {
-   "id": 109,
-   "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) · lần gần nhất (ms)",
-   "description": "A1 = SR gom/ship dữ liệu về service (agg: một blob bitmap; rows: từng actor_id rồi service build), A2 = serialize, A3 = ghi blob Mongo; 'A tag total' = A1+A2+A3.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 46,
     "w": 12,
     "h": 8
    },
    "fieldConfig": {
     "defaults": {
-     "unit": "ms"
+     "unit": "ms",
+     "decimals": 1
     },
     "overrides": []
    },
    "targets": [
     {
-     "expr": "bench_latency_ms_last{phase=\"tag\",variant=\"mongo-agg\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 110,
-   "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) · trung bình tích luỹ (ms)",
-   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 46,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_sum{phase=\"tag\",variant=\"mongo-agg\"}/bench_latency_ms_count{phase=\"tag\",variant=\"mongo-agg\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 111,
-   "type": "timeseries",
-   "title": "A-rows: Mongo, service tự build từ rows (export rows) · lần gần nhất (ms)",
-   "description": "A1 = SR gom/ship dữ liệu về service (agg: một blob bitmap; rows: từng actor_id rồi service build), A2 = serialize, A3 = ghi blob Mongo; 'A tag total' = A1+A2+A3.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 54,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_last{phase=\"tag\",variant=\"mongo-rows\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 112,
-   "type": "timeseries",
-   "title": "A-rows: Mongo, service tự build từ rows (export rows) · trung bình tích luỹ (ms)",
-   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 54,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_sum{phase=\"tag\",variant=\"mongo-rows\"}/bench_latency_ms_count{phase=\"tag\",variant=\"mongo-rows\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 113,
-   "type": "timeseries",
-   "title": "B: StarRocks native · lần gần nhất (ms)",
-   "description": "B1 = INSERT ... SELECT bitmap_agg chạy hoàn toàn trong SR; 'B tag total' = B1.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 62,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_last{phase=\"tag\",variant=\"sr\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 114,
-   "type": "timeseries",
-   "title": "B: StarRocks native · trung bình tích luỹ (ms)",
-   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 62,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_sum{phase=\"tag\",variant=\"sr\"}/bench_latency_ms_count{phase=\"tag\",variant=\"sr\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 115,
-   "type": "row",
-   "title": "2. Tính segment (AND/OR/NOT trên 10 tag)",
-   "collapsed": false,
-   "gridPos": {
-    "x": 0,
-    "y": 70,
-    "w": 24,
-    "h": 1
-   },
-   "panels": []
-  },
-  {
-   "id": 116,
-   "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) · lần gần nhất (ms)",
-   "description": "A4 = tải 10 tag từ Mongo, A5 = tính trong service, A6 = serialize, A7 = ghi segment Mongo; 'A total' là tổng bốn bước.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 71,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_last{phase=\"segment\",variant=\"mongo-agg\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 117,
-   "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) · trung bình tích luỹ (ms)",
-   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 71,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_sum{phase=\"segment\",variant=\"mongo-agg\"}/bench_latency_ms_count{phase=\"segment\",variant=\"mongo-agg\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 118,
-   "type": "timeseries",
-   "title": "A-rows: Mongo, service tự build từ rows (export rows) · lần gần nhất (ms)",
-   "description": "A4 = tải 10 tag từ Mongo, A5 = tính trong service, A6 = serialize, A7 = ghi segment Mongo; 'A total' là tổng bốn bước.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 79,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_last{phase=\"segment\",variant=\"mongo-rows\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 119,
-   "type": "timeseries",
-   "title": "A-rows: Mongo, service tự build từ rows (export rows) · trung bình tích luỹ (ms)",
-   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 79,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_sum{phase=\"segment\",variant=\"mongo-rows\"}/bench_latency_ms_count{phase=\"segment\",variant=\"mongo-rows\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 120,
-   "type": "timeseries",
-   "title": "B: StarRocks native · lần gần nhất (ms)",
-   "description": "B total = một câu SQL tính và lưu segment trong SR.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 87,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_last{phase=\"segment\",variant=\"sr\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 121,
-   "type": "timeseries",
-   "title": "B: StarRocks native · trung bình tích luỹ (ms)",
-   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 87,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_sum{phase=\"segment\",variant=\"sr\"}/bench_latency_ms_count{phase=\"segment\",variant=\"sr\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 122,
-   "type": "row",
-   "title": "3. Lấy toàn bộ user của segment (get all users)",
-   "collapsed": false,
-   "gridPos": {
-    "x": 0,
-    "y": 95,
-    "w": 24,
-    "h": 1
-   },
-   "panels": []
-  },
-  {
-   "id": 123,
-   "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) · lần gần nhất (ms)",
-   "description": "3.1: get blob segment từ Mongo, giải mã và duyệt hết user trong service.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 96,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_last{phase=\"read\",variant=\"mongo-agg\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 124,
-   "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) · trung bình tích luỹ (ms)",
-   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 96,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_sum{phase=\"read\",variant=\"mongo-agg\"}/bench_latency_ms_count{phase=\"read\",variant=\"mongo-agg\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 125,
-   "type": "timeseries",
-   "title": "A-rows: Mongo, service tự build từ rows (export rows) · lần gần nhất (ms)",
-   "description": "3.1: get blob segment từ Mongo, giải mã và duyệt hết user trong service.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 104,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_last{phase=\"read\",variant=\"mongo-rows\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 126,
-   "type": "timeseries",
-   "title": "A-rows: Mongo, service tự build từ rows (export rows) · trung bình tích luỹ (ms)",
-   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 104,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_sum{phase=\"read\",variant=\"mongo-rows\"}/bench_latency_ms_count{phase=\"read\",variant=\"mongo-rows\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 127,
-   "type": "timeseries",
-   "title": "B: StarRocks native · lần gần nhất (ms)",
-   "description": "3.2: SELECT unnest(bitmap_to_array(bm)) đọc toàn bộ user của segment về service.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 112,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_last{phase=\"read\",variant=\"sr\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 128,
-   "type": "timeseries",
-   "title": "B: StarRocks native · trung bình tích luỹ (ms)",
-   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 112,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "bench_latency_ms_sum{phase=\"read\",variant=\"sr\"}/bench_latency_ms_count{phase=\"read\",variant=\"sr\"}",
-     "legendFormat": "{{step}}",
-     "refId": "A"
-    }
-   ]
-  },
-  {
-   "id": 129,
-   "type": "row",
-   "title": "4. Tài nguyên server (StarRocks, MongoDB)",
-   "collapsed": false,
-   "gridPos": {
-    "x": 0,
-    "y": 120,
-    "w": 24,
-    "h": 1
-   },
-   "panels": []
-  },
-  {
-   "id": 1,
-   "type": "timeseries",
-   "title": "SR query rate (qps)",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 129,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "rate(starrocks_fe_query_total[1m])",
-     "legendFormat": "qps",
-     "refId": "A"
-    }
-   ],
-   "description": "Số query/giây FE StarRocks nhận. Phản ánh tải của pipeline B (SQL tính segment, lấy toàn bộ user) và các câu load/ETL. Tăng vọt khi bước segment/read chạy."
-  },
-  {
-   "id": 2,
-   "type": "timeseries",
-   "title": "SR query latency avg (ms)",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 129,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "rate(starrocks_fe_query_latency_ms_sum[1m])/rate(starrocks_fe_query_latency_ms_count[1m])",
-     "legendFormat": "avg",
+     "expr": "sum by (case) (bench_latency_ms_sum{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\"})/sum by (case) (bench_latency_ms_count{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\"})",
+     "legendFormat": "{{case}} avg",
      "refId": "A"
     },
     {
-     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.99\"}",
-     "legendFormat": "p99",
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.5\"})",
+     "legendFormat": "{{case}} p50",
      "refId": "B"
+    },
+    {
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.9\"})",
+     "legendFormat": "{{case}} p90",
+     "refId": "C"
+    },
+    {
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\",quantile=\"0.99\"})",
+     "legendFormat": "{{case}} p99",
+     "refId": "D"
     }
    ],
-   "description": "Độ trễ query ở FE StarRocks: trung bình (sum/count) và p99. So với A total/B total trong báo cáo benchmark để thấy câu nào chậm; p99 cao hơn nhiều so với avg nghĩa là có query nặng (thường là load gold hoặc B1)."
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
   },
   {
-   "id": 3,
+   "id": 15,
    "type": "timeseries",
-   "title": "RAM theo container",
+   "title": "Latency trung bình từng bước (ms)",
+   "description": "Trung bình từng bước con của mỗi case (ví dụ A1 SR -> bitmap, A3 ghi chunk Mongo, A4 tải chunk, A5 tính, B1 INSERT trong SR).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
-    "x": 0,
-    "y": 137,
+    "x": 12,
+    "y": 45,
     "w": 12,
     "h": 8
    },
    "fieldConfig": {
     "defaults": {
-     "unit": "bytes"
+     "unit": "ms",
+     "decimals": 1
     },
     "overrides": []
    },
    "targets": [
     {
-     "expr": "container_mem_bytes{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}",
-     "legendFormat": "{{container}}",
+     "expr": "sum by (case, step) (bench_latency_ms_sum{test=\"t2\",limits=\"$limits\",step!~\"(A|B) tag total.*\"})/sum by (case, step) (bench_latency_ms_count{test=\"t2\",limits=\"$limits\",step!~\"(A|B) tag total.*\"})",
+     "legendFormat": "{{case}} · {{step}}",
      "refId": "A"
-    },
-    {
-     "expr": "starrocks_be_process_mem_bytes",
-     "legendFormat": "BE (chỉ tiến trình BE, nằm trong container starrocks)",
-     "refId": "B"
     }
    ],
-   "description": "RAM thực dùng của từng container (docker stats). Giới hạn: starrocks 6GB, mongo 6GB, service 3GB. Đường 'BE (chỉ tiến trình BE, nằm trong container starrocks)' là một phần của container ironman-starrocks-bitmap; phần chênh chủ yếu là FE (JVM). So với giới hạn thì dùng đường container."
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
   },
   {
-   "id": 4,
+   "id": 16,
    "type": "timeseries",
    "title": "CPU theo container (core)",
+   "description": "CPU thực dùng của StarRocks, MongoDB và service benchmark trong lúc test chạy (docker stats; 1 = 1 core).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
-    "x": 12,
-    "y": 137,
+    "x": 0,
+    "y": 53,
     "w": 12,
     "h": 8
    },
    "fieldConfig": {
     "defaults": {
      "unit": "short",
-     "decimals": 2,
-     "min": 0
+     "decimals": 2
     },
     "overrides": []
    },
    "targets": [
     {
-     "expr": "container_cpu_cores{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}",
+     "expr": "container_cpu_cores{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"} and on() max(bench_phase_active{test=\"t2\",limits=\"$limits\"})",
      "legendFormat": "{{container}}",
      "refId": "A"
     }
    ],
-   "description": "CPU thực dùng của từng container, đo bằng docker stats (1 = 1 core, tối đa 10 core của Docker). So starrocks-bitmap với mongo-bitmap để thấy pipeline nào tốn CPU hơn ở phía server. Chưa gồm CPU của service benchmark (Java chạy trên host, ngoài Docker)."
-  },
-  {
-   "id": 5,
-   "type": "timeseries",
-   "title": "Mongo ops/s",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 145,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "rate(mongodb_ss_opcounters[1m])",
-     "legendFormat": "{{legacy_op_type}}",
-     "refId": "A"
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
     }
-   ],
-   "description": "Số thao tác/giây trên MongoDB theo loại (insert/query/update/getmore...). Phản ánh pipeline A: ghi blob tag/segment (insert) và đọc blob (query/getmore) qua GridFS."
+   }
   },
   {
-   "id": 6,
+   "id": 17,
    "type": "timeseries",
-   "title": "Mongo network bytes/s",
+   "title": "RAM theo container",
+   "description": "RAM thực dùng của StarRocks, MongoDB và service benchmark trong lúc test chạy (docker stats).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 145,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "Bps"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "rate(mongodb_ss_network_bytesIn[1m])",
-     "legendFormat": "in",
-     "refId": "A"
-    },
-    {
-     "expr": "rate(mongodb_ss_network_bytesOut[1m])",
-     "legendFormat": "out",
-     "refId": "B"
-    }
-   ],
-   "description": "Lưu lượng mạng vào/ra MongoDB (byte/giây). In = ghi bitmap tag/segment, out = service tải blob tag để tính segment. Đây là chi phí di chuyển dữ liệu mà pipeline B không có."
-  },
-  {
-   "id": 7,
-   "type": "timeseries",
-   "title": "Mongo resident memory (MB)",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 153,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "decmbytes"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "mongodb_ss_mem_resident",
-     "legendFormat": "resident",
-     "refId": "A"
-    }
-   ],
-   "description": "RAM resident của mongod (MB). Mongo cache blob GridFS nên tăng dần theo dung lượng dữ liệu; so với RAM của SR BE để thấy chi phí bộ nhớ của hai hướng."
-  },
-  {
-   "id": 8,
-   "type": "timeseries",
-   "title": "Mongo data size",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 153,
+    "y": 53,
     "w": 12,
     "h": 8
    },
@@ -1317,176 +769,964 @@
    },
    "targets": [
     {
-     "expr": "mongodb_dbstats_dataSize{database=\"bm_bench\"}",
-     "legendFormat": "dataSize",
+     "expr": "container_mem_bytes{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"} and on() max(bench_phase_active{test=\"t2\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
      "refId": "A"
     }
    ],
-   "description": "Dung lượng dữ liệu database bm_bench (byte): tổng blob bitmap tag và segment trong GridFS. So với kích thước bitmap trong SR để so chi phí lưu trữ."
-  },
-  {
-   "id": 9,
-   "type": "timeseries",
-   "title": "SR query latency percentiles (ms)",
-   "description": "Phân vị độ trễ query ở FE StarRocks (p75 → p99.9). Khoảng cách giữa p75 và p99.9 cho thấy độ lệch đuôi: câu nhẹ (tính segment) nằm ở p75, câu nặng (load gold, B1 bitmap_agg) kéo p99/p99.9 lên.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 161,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.75\"}",
-     "legendFormat": "p75",
-     "refId": "A"
-    },
-    {
-     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.95\"}",
-     "legendFormat": "p95",
-     "refId": "B"
-    },
-    {
-     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.98\"}",
-     "legendFormat": "p98",
-     "refId": "C"
-    },
-    {
-     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.99\"}",
-     "legendFormat": "p99",
-     "refId": "D"
-    },
-    {
-     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.999\"}",
-     "legendFormat": "p99.9",
-     "refId": "E"
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
     }
-   ]
+   }
   },
   {
-   "id": 10,
-   "type": "timeseries",
-   "title": "Mongo op latency avg (ms)",
-   "description": "Độ trễ trung bình mỗi thao tác trên MongoDB theo loại (reads = tải blob tag/segment, writes = ghi blob). Là phần Mongo của A4/A3/A7; cộng thêm thời gian compute ở service để ra A total.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 12,
-    "y": 161,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"reads\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"reads\"}[1m]),1)/1000",
-     "legendFormat": "reads",
-     "refId": "A"
-    },
-    {
-     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"writes\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"writes\"}[1m]),1)/1000",
-     "legendFormat": "writes",
-     "refId": "B"
-    },
-    {
-     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"commands\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"commands\"}[1m]),1)/1000",
-     "legendFormat": "commands",
-     "refId": "C"
-    }
-   ]
-  },
-  {
-   "id": 11,
-   "type": "timeseries",
-   "title": "SR vs Mongo latency (ms)",
-   "description": "Đặt cạnh nhau độ trễ phía SR (pipeline B) và Mongo (pipeline A) để so trực quan. Lưu ý đây là độ trễ phía server, chưa gồm compute AND/OR/NOT và giải mã bitmap ở service; số end-to-end A vs B xem báo cáo benchmark.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 169,
-    "w": 12,
-    "h": 8
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms"
-    },
-    "overrides": []
-   },
-   "targets": [
-    {
-     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.95\"}",
-     "legendFormat": "SR p95 query",
-     "refId": "A"
-    },
-    {
-     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"reads\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"reads\"}[1m]),1)/1000",
-     "legendFormat": "Mongo read avg",
-     "refId": "B"
-    },
-    {
-     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"writes\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"writes\"}[1m]),1)/1000",
-     "legendFormat": "Mongo write avg",
-     "refId": "C"
-    }
-   ]
-  },
-  {
-   "id": 301,
+   "id": 18,
    "type": "timeseries",
    "title": "Network nhận theo container (byte/s)",
-   "description": "Lưu lượng mạng vào từng container (docker stats). Service nhận gì từ StarRocks và Mongo; StarRocks nhận gì từ service. Pipeline Mongo rows kéo từng actor_id từ StarRocks về service nên service nhận nhiều.",
+   "description": "Lưu lượng mạng vào từng container trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 61,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(container_net_rx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[10s]) and on() max(bench_phase_active{test=\"t2\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 19,
+   "type": "timeseries",
+   "title": "Network gửi theo container (byte/s)",
+   "description": "Lưu lượng mạng ra từ từng container trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 61,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(container_net_tx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[10s]) and on() max(bench_phase_active{test=\"t2\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 20,
+   "type": "timeseries",
+   "title": "StarRocks: query/s",
+   "description": "Số câu query FE StarRocks nhận mỗi giây trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 69,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(starrocks_fe_query_total[10s]) and on() max(bench_phase_active{test=\"t2\",limits=\"$limits\"})",
+     "legendFormat": "qps",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 21,
+   "type": "timeseries",
+   "title": "MongoDB: operation/s",
+   "description": "Số thao tác Mongo mỗi giây theo loại (insert, query, update, getmore, delete) trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 69,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (legacy_op_type) (rate(mongodb_ss_opcounters{legacy_op_type=~\"insert|query|update|getmore|delete\"}[10s])) and on() max(bench_phase_active{test=\"t2\",limits=\"$limits\"})",
+     "legendFormat": "{{legacy_op_type}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 22,
+   "type": "timeseries",
+   "title": "Service: lượt đo/s",
+   "description": "Số lần thao tác chính (một tag, một segment hoặc một lần get) service hoàn thành mỗi giây.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 69,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (case) (rate(bench_latency_ms_count{test=\"t2\",limits=\"$limits\",step=~\"(A|B) tag total.*\"}[10s]))",
+     "legendFormat": "{{case}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 23,
+   "type": "row",
+   "title": "Test 3: tính segment từ bitmap tag trong Mongo so với trong StarRocks",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 76,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 24,
+   "type": "table",
+   "title": "Latency: avg, p50, p90, p99 (ms) — Latency từ khi bắt đầu lấy bitmap tag (Mongo: get 10 tag, tối đa 10 chunk đọc song song; SR: bắt đầu query) đến khi segment lưu xong (and/or/not của 10 tag bất kỳ, segment 5 đến 10 triệu user)",
+   "description": "Latency từ khi bắt đầu lấy bitmap tag (Mongo: get 10 tag, tối đa 10 chunk đọc song song; SR: bắt đầu query) đến khi segment lưu xong (and/or/not của 10 tag bất kỳ, segment 5 đến 10 triệu user).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 77,
+    "w": 24,
+    "h": 6
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "decimals": 1
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "n"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "short"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_sum{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\"}[12h])/last_over_time(bench_latency_ms_count{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\"}[12h]))",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\",quantile=\"0.5\"}[12h]))",
+     "legendFormat": "",
+     "refId": "B",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\",quantile=\"0.9\"}[12h]))",
+     "legendFormat": "",
+     "refId": "C",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\",quantile=\"0.99\"}[12h]))",
+     "legendFormat": "",
+     "refId": "D",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_count{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\"}[12h]))",
+     "legendFormat": "",
+     "refId": "E",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "case": "Case",
+       "Value #A": "avg",
+       "Value #B": "p50",
+       "Value #C": "p90",
+       "Value #D": "p99",
+       "Value #E": "n"
+      },
+      "indexByName": {
+       "case": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4,
+       "Value #E": 5
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 25,
+   "type": "timeseries",
+   "title": "Latency theo thời gian: avg, p50, p90, p99 (ms)",
+   "description": "Số tích luỹ từ đầu case đến thời điểm đó (avg và phân vị của mọi lần đo tới lúc này).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 83,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (case) (bench_latency_ms_sum{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\"})/sum by (case) (bench_latency_ms_count{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\"})",
+     "legendFormat": "{{case}} avg",
+     "refId": "A"
+    },
+    {
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\",quantile=\"0.5\"})",
+     "legendFormat": "{{case}} p50",
+     "refId": "B"
+    },
+    {
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\",quantile=\"0.9\"})",
+     "legendFormat": "{{case}} p90",
+     "refId": "C"
+    },
+    {
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\",quantile=\"0.99\"})",
+     "legendFormat": "{{case}} p99",
+     "refId": "D"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 26,
+   "type": "timeseries",
+   "title": "Latency trung bình từng bước (ms)",
+   "description": "Trung bình từng bước con của mỗi case (ví dụ A1 SR -> bitmap, A3 ghi chunk Mongo, A4 tải chunk, A5 tính, B1 INSERT trong SR).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 83,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (case, step) (bench_latency_ms_sum{test=\"t3\",limits=\"$limits\",step!~\"(A total.*|B total.*)\"})/sum by (case, step) (bench_latency_ms_count{test=\"t3\",limits=\"$limits\",step!~\"(A total.*|B total.*)\"})",
+     "legendFormat": "{{case}} · {{step}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 27,
+   "type": "timeseries",
+   "title": "CPU theo container (core)",
+   "description": "CPU thực dùng của StarRocks, MongoDB và service benchmark trong lúc test chạy (docker stats; 1 = 1 core).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 91,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "container_cpu_cores{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"} and on() max(bench_phase_active{test=\"t3\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 28,
+   "type": "timeseries",
+   "title": "RAM theo container",
+   "description": "RAM thực dùng của StarRocks, MongoDB và service benchmark trong lúc test chạy (docker stats).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 91,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "container_mem_bytes{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"} and on() max(bench_phase_active{test=\"t3\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 29,
+   "type": "timeseries",
+   "title": "Network nhận theo container (byte/s)",
+   "description": "Lưu lượng mạng vào từng container trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 99,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(container_net_rx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[10s]) and on() max(bench_phase_active{test=\"t3\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 30,
+   "type": "timeseries",
+   "title": "Network gửi theo container (byte/s)",
+   "description": "Lưu lượng mạng ra từ từng container trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 99,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(container_net_tx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[10s]) and on() max(bench_phase_active{test=\"t3\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 31,
+   "type": "timeseries",
+   "title": "StarRocks: query/s",
+   "description": "Số câu query FE StarRocks nhận mỗi giây trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 107,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(starrocks_fe_query_total[10s]) and on() max(bench_phase_active{test=\"t3\",limits=\"$limits\"})",
+     "legendFormat": "qps",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 32,
+   "type": "timeseries",
+   "title": "MongoDB: operation/s",
+   "description": "Số thao tác Mongo mỗi giây theo loại (insert, query, update, getmore, delete) trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 107,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (legacy_op_type) (rate(mongodb_ss_opcounters{legacy_op_type=~\"insert|query|update|getmore|delete\"}[10s])) and on() max(bench_phase_active{test=\"t3\",limits=\"$limits\"})",
+     "legendFormat": "{{legacy_op_type}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 33,
+   "type": "timeseries",
+   "title": "Service: lượt đo/s",
+   "description": "Số lần thao tác chính (một tag, một segment hoặc một lần get) service hoàn thành mỗi giây.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 107,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (case) (rate(bench_latency_ms_count{test=\"t3\",limits=\"$limits\",step=~\"(A total.*|B total.*)\"}[10s]))",
+     "legendFormat": "{{case}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 34,
+   "type": "row",
+   "title": "Test 4: lấy toàn bộ user của segment từ Mongo so với từ StarRocks",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 114,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 35,
+   "type": "table",
+   "title": "Latency: avg, p50, p90, p99 (ms) — Latency từ khi bắt đầu get đến khi service có toàn bộ user của segment",
+   "description": "Latency từ khi bắt đầu get đến khi service có toàn bộ user của segment. Mongo: get chunk, giải mã, duyệt hết. SR: SELECT unnest(bitmap_to_array(bm)) trả từng hàng.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 115,
+    "w": 24,
+    "h": 6
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "decimals": 1
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "n"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "short"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_sum{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\"}[12h])/last_over_time(bench_latency_ms_count{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\"}[12h]))",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\",quantile=\"0.5\"}[12h]))",
+     "legendFormat": "",
+     "refId": "B",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\",quantile=\"0.9\"}[12h]))",
+     "legendFormat": "",
+     "refId": "C",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_quantile{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\",quantile=\"0.99\"}[12h]))",
+     "legendFormat": "",
+     "refId": "D",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "expr": "max by (case) (last_over_time(bench_latency_ms_count{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\"}[12h]))",
+     "legendFormat": "",
+     "refId": "E",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "case": "Case",
+       "Value #A": "avg",
+       "Value #B": "p50",
+       "Value #C": "p90",
+       "Value #D": "p99",
+       "Value #E": "n"
+      },
+      "indexByName": {
+       "case": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4,
+       "Value #E": 5
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 36,
+   "type": "timeseries",
+   "title": "Latency theo thời gian: avg, p50, p90, p99 (ms)",
+   "description": "Số tích luỹ từ đầu case đến thời điểm đó (avg và phân vị của mọi lần đo tới lúc này).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
     "y": 121,
-    "w": 12,
+    "w": 24,
     "h": 8
    },
    "fieldConfig": {
     "defaults": {
-     "unit": "Bps"
+     "unit": "ms",
+     "decimals": 1
     },
     "overrides": []
    },
    "targets": [
     {
-     "expr": "rate(container_net_rx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[30s])",
+     "expr": "sum by (case) (bench_latency_ms_sum{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\"})/sum by (case) (bench_latency_ms_count{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\"})",
+     "legendFormat": "{{case}} avg",
+     "refId": "A"
+    },
+    {
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\",quantile=\"0.5\"})",
+     "legendFormat": "{{case}} p50",
+     "refId": "B"
+    },
+    {
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\",quantile=\"0.9\"})",
+     "legendFormat": "{{case}} p90",
+     "refId": "C"
+    },
+    {
+     "expr": "max by (case) (bench_latency_ms_quantile{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\",quantile=\"0.99\"})",
+     "legendFormat": "{{case}} p99",
+     "refId": "D"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 37,
+   "type": "timeseries",
+   "title": "CPU theo container (core)",
+   "description": "CPU thực dùng của StarRocks, MongoDB và service benchmark trong lúc test chạy (docker stats; 1 = 1 core).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 129,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "container_cpu_cores{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"} and on() max(bench_phase_active{test=\"t4\",limits=\"$limits\"})",
      "legendFormat": "{{container}}",
      "refId": "A"
     }
-   ]
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
   },
   {
-   "id": 302,
+   "id": 38,
    "type": "timeseries",
-   "title": "Network gửi theo container (byte/s)",
-   "description": "Lưu lượng mạng ra từ từng container. starrocks-bitmap gửi dữ liệu gold/bitmap về service; mongo-bitmap gửi blob tag khi service tải 10 tag; service gửi blob cần ghi vào Mongo.",
+   "title": "RAM theo container",
+   "description": "RAM thực dùng của StarRocks, MongoDB và service benchmark trong lúc test chạy (docker stats).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 121,
+    "y": 129,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "container_mem_bytes{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"} and on() max(bench_phase_active{test=\"t4\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 39,
+   "type": "timeseries",
+   "title": "Network nhận theo container (byte/s)",
+   "description": "Lưu lượng mạng vào từng container trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 137,
     "w": 12,
     "h": 8
    },
@@ -1498,11 +1738,205 @@
    },
    "targets": [
     {
-     "expr": "rate(container_net_tx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[30s])",
+     "expr": "rate(container_net_rx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[10s]) and on() max(bench_phase_active{test=\"t4\",limits=\"$limits\"})",
      "legendFormat": "{{container}}",
      "refId": "A"
     }
-   ]
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 40,
+   "type": "timeseries",
+   "title": "Network gửi theo container (byte/s)",
+   "description": "Lưu lượng mạng ra từ từng container trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 137,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(container_net_tx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[10s]) and on() max(bench_phase_active{test=\"t4\",limits=\"$limits\"})",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 41,
+   "type": "timeseries",
+   "title": "StarRocks: query/s",
+   "description": "Số câu query FE StarRocks nhận mỗi giây trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 145,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(starrocks_fe_query_total[10s]) and on() max(bench_phase_active{test=\"t4\",limits=\"$limits\"})",
+     "legendFormat": "qps",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 42,
+   "type": "timeseries",
+   "title": "MongoDB: operation/s",
+   "description": "Số thao tác Mongo mỗi giây theo loại (insert, query, update, getmore, delete) trong lúc test chạy.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 145,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (legacy_op_type) (rate(mongodb_ss_opcounters{legacy_op_type=~\"insert|query|update|getmore|delete\"}[10s])) and on() max(bench_phase_active{test=\"t4\",limits=\"$limits\"})",
+     "legendFormat": "{{legacy_op_type}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 43,
+   "type": "timeseries",
+   "title": "Service: lượt đo/s",
+   "description": "Số lần thao tác chính (một tag, một segment hoặc một lần get) service hoàn thành mỗi giây.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 145,
+    "w": 8,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (case) (rate(bench_latency_ms_count{test=\"t4\",limits=\"$limits\",step=~\"(A get all.*|B get all.*)\"}[10s]))",
+     "legendFormat": "{{case}}",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    }
+   }
   }
- ]
+ ],
+ "templating": {
+  "list": [
+   {
+    "name": "limits",
+    "label": "Chế độ",
+    "type": "custom",
+    "query": "limited,unlimited",
+    "current": {
+     "selected": true,
+     "text": "limited",
+     "value": "limited"
+    },
+    "options": [
+     {
+      "selected": true,
+      "text": "limited",
+      "value": "limited"
+     },
+     {
+      "selected": false,
+      "text": "unlimited",
+      "value": "unlimited"
+     }
+    ],
+    "includeAll": false,
+    "multi": false
+   }
+  ]
+ }
 }

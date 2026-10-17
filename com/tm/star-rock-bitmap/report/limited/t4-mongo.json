@@ -1,0 +1,56 @@
+{
+ "meta": {
+  "cmd": "getall",
+  "pipeline": "a",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A get all users: mongo get chunks + iterate": {
+   "n": 40,
+   "avg_ms": 46.89,
+   "min_ms": 36.207,
+   "p50_ms": 46.935,
+   "p90_ms": 53.443,
+   "p99_ms": 84.93,
+   "max_ms": 84.93,
+   "sum_ms": 1875.589
+  }
+ },
+ "notes": {
+  "users_read_a": 299218911
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 0.6599999999999999,
+   "cpu_max": 0.7008,
+   "mem_max_gb": 3.421,
+   "net_rx_gb": 0.0,
+   "net_tx_gb": 0.0,
+   "samples": 2
+  },
+  "mongo": {
+   "cpu_avg": 0.0723,
+   "cpu_max": 0.1413,
+   "mem_max_gb": 2.15,
+   "net_rx_gb": 0.0,
+   "net_tx_gb": 0.3,
+   "samples": 2
+  },
+  "service": {
+   "cpu_avg": 1.138,
+   "cpu_max": 1.138,
+   "mem_max_gb": 0.24287109375,
+   "net_rx_gb": 0.113,
+   "net_tx_gb": 8.77e-05,
+   "samples": 1
+  }
+ },
+ "wall_seconds": 2.7,
+ "case": "t4-mongo",
+ "test": "t4",
+ "limits": "limited"
+}

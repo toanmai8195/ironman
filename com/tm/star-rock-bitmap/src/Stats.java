@@ -19,6 +19,10 @@ final class Stats {
 
   /** Chế độ export của pipeline A (agg|rows), gắn vào nhãn metric để Grafana tách hai lần chạy. */
   volatile String mode = "";
+  /** Nhãn của lần chạy: test (t1..t4), limits (limited/unlimited), case (ví dụ t3-mongo); để Grafana lọc theo test. */
+  volatile String test = "";
+  volatile String limits = "";
+  volatile String caseName = "";
 
   private final Map<String, long[]> agg = new LinkedHashMap<>(); // {count, sumNs, lastNs}
 
@@ -78,11 +82,12 @@ final class Stats {
 
   private synchronized String metricsText() {
     StringBuilder sb = new StringBuilder();
+    sb.append(String.format("bench_phase_active{test=\"%s\",limits=\"%s\",case=\"%s\"} 1%n", test, limits, caseName));
     for (var e : agg.entrySet()) {
       String n = e.getKey();
       String pl = n.startsWith("B") ? "B" : n.startsWith("A") ? "A" : "sr";
-      String l = String.format("{step=\"%s\",phase=\"%s\",pipeline=\"%s\",mode=\"%s\",variant=\"%s\"}", n.replace("\"", ""),
-          phase(n), pl, mode, variant(pl));
+      String l = String.format("{step=\"%s\",phase=\"%s\",pipeline=\"%s\",mode=\"%s\",variant=\"%s\",test=\"%s\",limits=\"%s\",case=\"%s\"}", n.replace("\"", ""),
+          phase(n), pl, mode, variant(pl), test, limits, caseName);
       long[] a = e.getValue();
       sb.append("bench_latency_ms_last").append(l).append(' ').append(a[2] / 1e6).append('\n');
       sb.append("bench_latency_ms_sum").append(l).append(' ').append(a[1] / 1e6).append('\n');
