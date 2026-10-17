@@ -22,7 +22,11 @@ record Config(
     long seed,
     String export,
     String pipeline,
-    int reads) {
+    int reads,
+    double segMin,
+    double segMax,
+    int fullGets,
+    String out) {
 
   /** Chạy pipeline A (Mongo + service). */
   boolean runA() {
@@ -44,6 +48,15 @@ record Config(
   /** Tên đầy đủ của bảng gold. */
   String goldTable() {
     return (goldInIceberg() ? goldCatalog + "." : "") + "bm_bench." + GOLD_NAME;
+  }
+
+  /** Phần trăm universe là thành viên của tag (rải min..max, xác định theo t). */
+  int tagPct(int tag) {
+    return minPct + (tag * 7) % (maxPct - minPct + 1);
+  }
+
+  double tagPctFraction(int tag) {
+    return tagPct(tag) / 100.0;
   }
 
   /** Attribute chứa tag (tag 1..N chia đều cho attribute 1..). */
@@ -76,13 +89,17 @@ record Config(
         Integer.parseInt(m.getOrDefault("removed-pct", "5")),
         m.getOrDefault("gold-catalog", ""),
         Integer.parseInt(m.getOrDefault("universe", "50000000")),
-        Integer.parseInt(m.getOrDefault("min-pct", "20")),
-        Integer.parseInt(m.getOrDefault("max-pct", "40")),
+        Integer.parseInt(m.getOrDefault("min-pct", "10")),
+        Integer.parseInt(m.getOrDefault("max-pct", "20")),
         Integer.parseInt(m.getOrDefault("segments", "20")),
         Integer.parseInt(m.getOrDefault("leaves", "10")),
         Long.parseLong(m.getOrDefault("seed", "42")),
         m.getOrDefault("export", "agg"),
         m.getOrDefault("pipeline", "ab"),
-        Integer.parseInt(m.getOrDefault("reads", "50")));
+        Integer.parseInt(m.getOrDefault("reads", "50")),
+        Double.parseDouble(m.getOrDefault("seg-min", "0.105")),
+        Double.parseDouble(m.getOrDefault("seg-max", "0.195")),
+        Integer.parseInt(m.getOrDefault("full-gets", "40")),
+        m.getOrDefault("out", ""));
   }
 }

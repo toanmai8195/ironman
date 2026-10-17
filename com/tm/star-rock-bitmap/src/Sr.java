@@ -58,7 +58,7 @@ final class Sr {
       //   h < pct*100                      -> signal  1 (ADD, thành viên tag)
       //   pct*100 <= h < (pct+removed)*100 -> signal -1 (REMOVE, phải bị loại khi build bitmap)
       for (int t = 1; t <= cfg.tags(); t++) {
-        int pct = cfg.minPct() + (t * 7) % (cfg.maxPct() - cfg.minPct() + 1); // rải min..max, xác định theo t
+        int pct = cfg.tagPct(t); // rải min..max, xác định theo t
         String q =
             String.format(
                 "INSERT INTO %s SELECT %d, CAST(generate_series AS INT), %d,"

@@ -1,0 +1,52 @@
+{
+ "meta": {
+  "cmd": "segment",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 30,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B total: SQL compute + store": {
+   "n": 300,
+   "avg_ms": 106.482,
+   "min_ms": 70.461,
+   "p50_ms": 103.978,
+   "p90_ms": 113.512,
+   "p99_ms": 206.602,
+   "max_ms": 281.455,
+   "sum_ms": 31944.503
+  }
+ },
+ "notes": {},
+ "resources": {
+  "sr": {
+   "cpu_avg": 1.3379375,
+   "cpu_max": 1.6917,
+   "mem_max_gb": 4.367,
+   "net_rx_gb": 0.0005784,
+   "net_tx_gb": 0.0030700000000000007,
+   "samples": 32
+  },
+  "mongo": {
+   "cpu_avg": 0.0532625,
+   "cpu_max": 0.3458,
+   "mem_max_gb": 0.2220703125,
+   "net_rx_gb": 0.000108,
+   "net_tx_gb": 0.00227,
+   "samples": 32
+  },
+  "service": {
+   "cpu_avg": 0.027919354838709675,
+   "cpu_max": 0.2879,
+   "mem_max_gb": 0.12548828125,
+   "net_rx_gb": 0.000409,
+   "net_tx_gb": 0.000589,
+   "samples": 31
+  }
+ },
+ "wall_seconds": 63.5,
+ "key": "2.2-segment-sr"
+}

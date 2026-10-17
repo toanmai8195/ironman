@@ -1,0 +1,54 @@
+{
+ "meta": {
+  "cmd": "getall",
+  "pipeline": "a",
+  "export": "agg",
+  "tags": 30,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A get all users: mongo get + iterate": {
+   "n": 40,
+   "avg_ms": 42.973,
+   "min_ms": 32.865,
+   "p50_ms": 40.683,
+   "p90_ms": 52.611,
+   "p99_ms": 97.412,
+   "max_ms": 97.412,
+   "sum_ms": 1718.921
+  }
+ },
+ "notes": {
+  "users_read_a": 303328588
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 0.0275,
+   "cpu_max": 0.028300000000000002,
+   "mem_max_gb": 2.737,
+   "net_rx_gb": 4e-06,
+   "net_tx_gb": 0.0,
+   "samples": 2
+  },
+  "mongo": {
+   "cpu_avg": 0.14105,
+   "cpu_max": 0.2757,
+   "mem_max_gb": 2.35,
+   "net_rx_gb": 0.0,
+   "net_tx_gb": 0.3,
+   "samples": 2
+  },
+  "service": {
+   "cpu_avg": 1.26,
+   "cpu_max": 1.26,
+   "mem_max_gb": 0.21533203125,
+   "net_rx_gb": 0.132,
+   "net_tx_gb": 0.000112,
+   "samples": 1
+  }
+ },
+ "wall_seconds": 2.6,
+ "key": "3.1-getall-mongo"
+}

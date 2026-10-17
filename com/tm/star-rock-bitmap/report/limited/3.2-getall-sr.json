@@ -1,0 +1,54 @@
+{
+ "meta": {
+  "cmd": "getall",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 30,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B get all users: SQL unnest": {
+   "n": 40,
+   "avg_ms": 1412.762,
+   "min_ms": 1008.792,
+   "p50_ms": 1387.953,
+   "p90_ms": 1752.174,
+   "p99_ms": 1914.624,
+   "max_ms": 1914.624,
+   "sum_ms": 56510.485
+  }
+ },
+ "notes": {
+  "users_read_b": 303328588
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 0.9582896551724138,
+   "cpu_max": 2.4382,
+   "mem_max_gb": 3.058,
+   "net_rx_gb": 0.003119,
+   "net_tx_gb": 3.88259,
+   "samples": 29
+  },
+  "mongo": {
+   "cpu_avg": 0.06668275862068965,
+   "cpu_max": 0.3312,
+   "mem_max_gb": 0.22236328125,
+   "net_rx_gb": 9.9e-05,
+   "net_tx_gb": 0.00209,
+   "samples": 29
+  },
+  "service": {
+   "cpu_avg": 1.0136642857142857,
+   "cpu_max": 1.2819,
+   "mem_max_gb": 0.235546875,
+   "net_rx_gb": 3.8,
+   "net_tx_gb": 0.00307,
+   "samples": 28
+  }
+ },
+ "wall_seconds": 57.6,
+ "key": "3.2-getall-sr"
+}

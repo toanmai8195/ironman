@@ -19,6 +19,10 @@ final class MongoStore implements AutoCloseable {
   static final int CHUNK_SIZE = 8 * 1024 * 1024;
   private static final GridFSUploadOptions UPLOAD = new GridFSUploadOptions().chunkSizeBytes(CHUNK_SIZE);
 
+  /** Tối đa số lần get (mỗi blob nhỏ hơn 1 chunk nên là 1 chunk) chạy đồng thời, để không nổ connection Mongo. */
+  static final int MAX_CONCURRENT_GETS = 10;
+
+  private final java.util.concurrent.Semaphore gets = new java.util.concurrent.Semaphore(MAX_CONCURRENT_GETS);
   private final MongoClient client;
   private final GridFSBucket bucket;
 
@@ -37,9 +41,14 @@ final class MongoStore implements AutoCloseable {
   }
 
   byte[] get(String name) {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    bucket.downloadToStream(name, out);
-    return out.toByteArray();
+    gets.acquireUninterruptibly();
+    try {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      bucket.downloadToStream(name, out);
+      return out.toByteArray();
+    } finally {
+      gets.release();
+    }
   }
 
   static String tagKey(int tag) {

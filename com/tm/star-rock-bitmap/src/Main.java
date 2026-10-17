@@ -31,10 +31,11 @@ public final class Main {
         case "etl" -> Bench.etl(c, mg, cfg, st);
         case "segment" -> Bench.segment(c, mg, cfg, st);
         case "read" -> Bench.read(c, mg, cfg, st);
+        case "getall" -> Bench.getAll(c, mg, cfg, st);
         case "run" -> { // như all nhưng không load lại gold
           Bench.etl(c, mg, cfg, st);
           Bench.segment(c, mg, cfg, st);
-          Bench.read(c, mg, cfg, st);
+          Bench.getAll(c, mg, cfg, st);
         }
         case "all" -> {
           Sr.load(c, cfg, st);
@@ -46,6 +47,11 @@ public final class Main {
       }
     }
     st.print();
+    if (!cfg.out().isEmpty()) {
+      st.writeJson(cfg.out(), String.format(
+          "{\"cmd\": \"%s\", \"pipeline\": \"%s\", \"export\": \"%s\", \"tags\": %d, \"segments\": %d, \"fullGets\": %d, \"universe\": %d}",
+          cmd, cfg.pipeline(), cfg.export(), cfg.tags(), cfg.segments(), cfg.fullGets(), cfg.universe()));
+    }
     System.out.println("\ntổng thời gian chạy: " + Duration.ofNanos(System.nanoTime() - start).toSeconds() + "s");
     System.exit(0); // đóng exporter /metrics
   }

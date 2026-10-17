@@ -1,0 +1,92 @@
+{
+ "meta": {
+  "cmd": "etl",
+  "pipeline": "a",
+  "export": "rows",
+  "tags": 30,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A1 SR scan rows+build": {
+   "n": 30,
+   "avg_ms": 1696.27,
+   "min_ms": 1208.688,
+   "p50_ms": 1667.65,
+   "p90_ms": 2104.613,
+   "p99_ms": 2153.252,
+   "max_ms": 2153.252,
+   "sum_ms": 50888.088
+  },
+  "A1 total: SR -> bitmap": {
+   "n": 30,
+   "avg_ms": 1696.321,
+   "min_ms": 1208.698,
+   "p50_ms": 1667.662,
+   "p90_ms": 2104.623,
+   "p99_ms": 2153.263,
+   "max_ms": 2153.263,
+   "sum_ms": 50889.639
+  },
+  "A2 serialize": {
+   "n": 30,
+   "avg_ms": 9.847,
+   "min_ms": 8.905,
+   "p50_ms": 9.393,
+   "p90_ms": 9.922,
+   "p99_ms": 21.415,
+   "max_ms": 21.415,
+   "sum_ms": 295.398
+  },
+  "A3 mongo put": {
+   "n": 30,
+   "avg_ms": 30.514,
+   "min_ms": 8.641,
+   "p50_ms": 23.181,
+   "p90_ms": 52.025,
+   "p99_ms": 73.847,
+   "max_ms": 73.847,
+   "sum_ms": 915.426
+  },
+  "A tag total: gold -> mongo": {
+   "n": 30,
+   "avg_ms": 1736.682,
+   "min_ms": 1241.503,
+   "p50_ms": 1717.103,
+   "p90_ms": 2130.454,
+   "p99_ms": 2199.802,
+   "max_ms": 2199.802,
+   "sum_ms": 52100.463
+  }
+ },
+ "notes": {},
+ "resources": {
+  "sr": {
+   "cpu_avg": 1.1956148148148147,
+   "cpu_max": 3.2230000000000003,
+   "mem_max_gb": 4.358,
+   "net_rx_gb": 0.0015493,
+   "net_tx_gb": 2.89651,
+   "samples": 27
+  },
+  "mongo": {
+   "cpu_avg": 0.08137777777777778,
+   "cpu_max": 0.38420000000000004,
+   "mem_max_gb": 0.2953125,
+   "net_rx_gb": 0.18886,
+   "net_tx_gb": 0.00203,
+   "samples": 27
+  },
+  "service": {
+   "cpu_avg": 1.0170153846153847,
+   "cpu_max": 1.4753,
+   "mem_max_gb": 0.4583984375,
+   "net_rx_gb": 2.85,
+   "net_tx_gb": 0.184,
+   "samples": 26
+  }
+ },
+ "wall_seconds": 53.3,
+ "key": "1.1-tag-mongo-rows"
+}

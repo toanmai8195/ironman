@@ -1,0 +1,92 @@
+{
+ "meta": {
+  "cmd": "segment",
+  "pipeline": "a",
+  "export": "agg",
+  "tags": 30,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A4 fetch tags (parallel)": {
+   "n": 300,
+   "avg_ms": 25.8,
+   "min_ms": 19.365,
+   "p50_ms": 24.166,
+   "p90_ms": 29.818,
+   "p99_ms": 47.84,
+   "max_ms": 162.406,
+   "sum_ms": 7739.872
+  },
+  "A5 compute and/or/not": {
+   "n": 300,
+   "avg_ms": 26.938,
+   "min_ms": 9.146,
+   "p50_ms": 25.094,
+   "p90_ms": 38.531,
+   "p99_ms": 47.241,
+   "max_ms": 65.502,
+   "sum_ms": 8081.309
+  },
+  "A6 serialize": {
+   "n": 300,
+   "avg_ms": 8.764,
+   "min_ms": 7.971,
+   "p50_ms": 8.452,
+   "p90_ms": 9.651,
+   "p99_ms": 11.957,
+   "max_ms": 15.342,
+   "sum_ms": 2629.199
+  },
+  "A7 mongo put segment": {
+   "n": 300,
+   "avg_ms": 32.582,
+   "min_ms": 6.277,
+   "p50_ms": 27.01,
+   "p90_ms": 56.249,
+   "p99_ms": 83.249,
+   "max_ms": 193.069,
+   "sum_ms": 9774.648
+  },
+  "A total (fetch+compute+store)": {
+   "n": 300,
+   "avg_ms": 94.083,
+   "min_ms": 56.187,
+   "p50_ms": 90.575,
+   "p90_ms": 121.605,
+   "p99_ms": 146.136,
+   "max_ms": 270.012,
+   "sum_ms": 28225.027
+  }
+ },
+ "notes": {},
+ "resources": {
+  "sr": {
+   "cpu_avg": 0.0383,
+   "cpu_max": 0.1063,
+   "mem_max_gb": 4.588,
+   "net_rx_gb": 1.4e-05,
+   "net_tx_gb": 0.002,
+   "samples": 15
+  },
+  "mongo": {
+   "cpu_avg": 0.7566133333333334,
+   "cpu_max": 1.1495,
+   "mem_max_gb": 2.197,
+   "net_rx_gb": 1.892,
+   "net_tx_gb": 18.79667,
+   "samples": 15
+  },
+  "service": {
+   "cpu_avg": 2.0311714285714286,
+   "cpu_max": 3.4739,
+   "mem_max_gb": 2.081,
+   "net_rx_gb": 18.0,
+   "net_tx_gb": 1.81,
+   "samples": 14
+  }
+ },
+ "wall_seconds": 29.8,
+ "key": "2.1-segment-mongo"
+}

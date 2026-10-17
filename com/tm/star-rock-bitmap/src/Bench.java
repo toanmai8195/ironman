@@ -69,7 +69,7 @@ final class Bench {
     try {
       for (int s = 1; s <= cfg.segments(); s++) {
         final int seg = s;
-        SegmentExpr expr = SegmentExpr.random(rng, cfg.tags(), cfg.leaves());
+        SegmentExpr expr = SegmentExpr.randomInRange(rng, cfg.tags(), cfg.leaves(), cfg::tagPctFraction, cfg.segMin(), cfg.segMax());
 
         RoaringBitmap res = null;
         byte[] blob = new byte[0];
@@ -178,6 +178,47 @@ final class Bench {
           return n;
         }
       });
+    }
+  }
+
+  /** Đo lấy toàn bộ user của segment: A = get blob Mongo + duyệt hết, B = SQL unnest toàn bộ. */
+  static void getAll(Connection c, MongoStore mg, Config cfg, Stats st) throws Exception {
+    Random rng = new Random(cfg.seed() + 2);
+    for (int i = 0; i < cfg.fullGets(); i++) {
+      int seg = 1 + rng.nextInt(cfg.segments());
+      long a = -1;
+      long b = -1;
+      if (cfg.runA()) {
+        a = st.time("A get all users: mongo get + iterate", () -> {
+          RoaringBitmap bm = BitmapCodec.deserialize(mg.get(MongoStore.segmentKey(seg)));
+          long n = 0;
+          var it = bm.getIntIterator();
+          while (it.hasNext()) {
+            it.next();
+            n++;
+          }
+          return n;
+        });
+        st.note("users_read_a", a);
+      }
+      if (cfg.runB()) {
+        b = st.time("B get all users: SQL unnest", () -> {
+          try (var stmt = c.createStatement()) {
+            stmt.setFetchSize(Integer.MIN_VALUE);
+            long n = 0;
+            try (ResultSet rs = stmt.executeQuery("SELECT u FROM bm_bench.segment_bitmap, unnest(bitmap_to_array(bm)) AS t(u)"
+                + " WHERE segment_id = " + seg)) {
+              while (rs.next()) {
+                rs.getLong(1);
+                n++;
+              }
+            }
+            return n;
+          }
+        });
+        st.note("users_read_b", b);
+      }
+      System.out.printf("getall %d/%d segment=%d users A=%d B=%d%n", i + 1, cfg.fullGets(), seg, a, b);
     }
   }
 }

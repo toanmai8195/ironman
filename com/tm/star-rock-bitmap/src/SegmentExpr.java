@@ -50,6 +50,36 @@ final class SegmentExpr {
     return pool.get(0);
   }
 
+  /**
+   * Xác suất một user thuộc segment, các tag độc lập theo hash và mỗi lá là một tag khác nhau, nên
+   * kích thước kỳ vọng của segment là universe nhân xác suất này.
+   */
+  double prob(java.util.function.IntToDoubleFunction p) {
+    if (op == TAG) {
+      return p.applyAsDouble(tag);
+    }
+    double a = l.prob(p);
+    double b = r.prob(p);
+    return switch (op) {
+      case AND -> a * b;
+      case OR -> 1 - (1 - a) * (1 - b);
+      default -> a * (1 - b);
+    };
+  }
+
+  /** Như {@link #random} nhưng chỉ nhận biểu thức có xác suất trong [lo, hi] (segment có kích thước định trước). */
+  static SegmentExpr randomInRange(
+      Random rng, int tags, int leaves, java.util.function.IntToDoubleFunction p, double lo, double hi) {
+    for (int i = 0; i < 1_000_000; i++) {
+      SegmentExpr e = random(rng, tags, leaves);
+      double pr = e.prob(p);
+      if (pr >= lo && pr <= hi) {
+        return e;
+      }
+    }
+    throw new IllegalStateException("không sinh được biểu thức có xác suất trong [" + lo + ", " + hi + "]");
+  }
+
   List<Integer> tagIds() {
     List<Integer> out = new ArrayList<>();
     collect(out);

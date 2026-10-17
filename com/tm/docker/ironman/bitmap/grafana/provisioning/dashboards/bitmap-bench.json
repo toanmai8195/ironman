@@ -11,7 +11,7 @@
   {
    "id": 200,
    "type": "row",
-   "title": "Ch\u1ec9 s\u1ed1 ch\u00ednh: trung b\u00ecnh, p50, p90, p99 theo pipeline (mongo-rows \u00b7 mongo-agg \u00b7 sr)",
+   "title": "Chỉ số chính: trung bình, p50, p90, p99 theo pipeline (mongo-rows · mongo-agg · sr)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -24,8 +24,8 @@
   {
    "id": 201,
    "type": "table",
-   "title": "1. Th\u1eddi gian x\u1eed l\u00fd m\u1ed9t tag: t\u1eeb gold \u0111\u1ebfn khi data s\u1eb5n s\u00e0ng tr\u00ean Mongo ho\u1eb7c StarRocks",
-   "description": "\u0110o t\u1eeb l\u00fac b\u1eaft \u0111\u1ea7u t\u00ednh tag t\u1eeb gold \u0111\u1ebfn khi bitmap \u0111\u00e3 ghi xong v\u00e0 s\u1eb5n s\u00e0ng. mongo-*: SR build/ship + decode/build + serialize + ghi Mongo (A tag total). sr: INSERT ... bitmap_agg (B tag total).",
+   "title": "1. Thời gian xử lý một tag: từ gold đến khi data sẵn sàng trên Mongo hoặc StarRocks",
+   "description": "Đo từ lúc bắt đầu tính tag từ gold đến khi bitmap đã ghi xong và sẵn sàng. mongo-*: SR build/ship + decode/build + serialize + ghi Mongo (A tag total). sr: INSERT ... bitmap_agg (B tag total).",
    "datasource": {
     "type": "prometheus"
    },
@@ -103,8 +103,8 @@
   {
    "id": 202,
    "type": "table",
-   "title": "2. Th\u1eddi gian t\u1ea1o m\u1ed9t segment: t\u1eeb l\u00fac b\u1eaft \u0111\u1ea7u l\u1ea5y d\u1eef li\u1ec7u \u0111\u1ebfn khi segment s\u1eb5n s\u00e0ng",
-   "description": "mongo-*: t\u1eeb l\u00fac t\u1ea3i 10 tag t\u1eeb Mongo \u0111\u1ebfn khi segment \u0111\u00e3 ghi xong v\u00e0o Mongo (fetch + compute + serialize + put). sr: t\u1eeb l\u00fac g\u1eedi c\u00e2u SQL \u0111\u1ebfn khi segment n\u1eb1m trong b\u1ea3ng segment_bitmap (B total).",
+   "title": "2. Thời gian tạo một segment: từ lúc bắt đầu lấy dữ liệu đến khi segment sẵn sàng",
+   "description": "mongo-*: từ lúc tải 10 tag từ Mongo đến khi segment đã ghi xong vào Mongo (fetch + compute + serialize + put). sr: từ lúc gửi câu SQL đến khi segment nằm trong bảng segment_bitmap (B total).",
    "datasource": {
     "type": "prometheus"
    },
@@ -182,8 +182,8 @@
   {
    "id": 203,
    "type": "table",
-   "title": "3a. Check contains (m\u1ed9t user c\u00f3 trong segment kh\u00f4ng)",
-   "description": "mongo-*: get blob segment + deserialize + contains trong service. sr: SELECT bitmap_contains.",
+   "title": "3. Lấy toàn bộ user của segment (3.1 Mongo, 3.2 StarRocks)",
+   "description": "Thời gian lấy toàn bộ user của một segment (5 đến 10 triệu user). mongo-*: get blob segment từ Mongo + giải mã + duyệt hết user trong service (3.1). sr: SELECT unnest(bitmap_to_array(bm)) đọc toàn bộ hàng về service (3.2). Mỗi pipeline đo trên cùng các segment mẫu.",
    "datasource": {
     "type": "prometheus"
    },
@@ -205,104 +205,25 @@
    },
    "targets": [
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A contains.*|B contains.*)\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A contains.*|B contains.*)\",variant=~\".+\"}[6h]))",
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\"}[6h]))",
      "instant": true,
      "format": "table",
      "refId": "A"
     },
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A contains.*|B contains.*)\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
      "instant": true,
      "format": "table",
      "refId": "B"
     },
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A contains.*|B contains.*)\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
      "instant": true,
      "format": "table",
      "refId": "C"
     },
     {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A contains.*|B contains.*)\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
-     "instant": true,
-     "format": "table",
-     "refId": "D"
-    }
-   ],
-   "transformations": [
-    {
-     "id": "merge",
-     "options": {}
-    },
-    {
-     "id": "organize",
-     "options": {
-      "excludeByName": {
-       "Time": true
-      },
-      "renameByName": {
-       "variant": "Pipeline",
-       "Value #A": "avg",
-       "Value #B": "p50",
-       "Value #C": "p90",
-       "Value #D": "p99"
-      },
-      "indexByName": {
-       "variant": 0,
-       "Value #A": 1,
-       "Value #B": 2,
-       "Value #C": 3,
-       "Value #D": 4
-      }
-     }
-    }
-   ]
-  },
-  {
-   "id": 204,
-   "type": "table",
-   "title": "3b. L\u1ea5y 1000 user c\u1ee7a segment",
-   "description": "mongo-*: get blob + deserialize + l\u1ea5y 1 trang 1000 user. sr: SELECT ... unnest(bitmap_to_array) LIMIT 1000.",
-   "datasource": {
-    "type": "prometheus"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 22,
-    "w": 24,
-    "h": 7
-   },
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms",
-     "decimals": 1
-    },
-    "overrides": []
-   },
-   "options": {
-    "showHeader": true
-   },
-   "targets": [
-    {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\"}[6h]))",
-     "instant": true,
-     "format": "table",
-     "refId": "A"
-    },
-    {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
-     "instant": true,
-     "format": "table",
-     "refId": "B"
-    },
-    {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
-     "instant": true,
-     "format": "table",
-     "refId": "C"
-    },
-    {
-     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get all users.*|B get all users.*)\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
      "instant": true,
      "format": "table",
      "refId": "D"
@@ -340,11 +261,11 @@
   {
    "id": 100,
    "type": "row",
-   "title": "0. T\u1ed5ng quan 3 pipeline (mongo rows \u00b7 mongo agg \u00b7 sr) \u2014 c\u00f9ng data, c\u00f9ng tag/attribute, c\u00f9ng \u0111i\u1ec1u ki\u1ec7n v\u00e0 s\u1ed1 segment",
+   "title": "0. Tổng quan 3 pipeline (mongo rows · mongo agg · sr) — cùng data, cùng tag/attribute, cùng điều kiện và số segment",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 29,
+    "y": 22,
     "w": 24,
     "h": 1
    },
@@ -353,14 +274,14 @@
   {
    "id": 101,
    "type": "bargauge",
-   "title": "Th\u1eddi gian x\u1eed l\u00fd trung b\u00ecnh m\u1ed7i tag (gold \u2192 store)",
-   "description": "Trung b\u00ecnh th\u1eddi gian t\u1eeb gold t\u1edbi khi bitmap c\u1ee7a 1 tag n\u1eb1m trong \u0111\u00edch. mongo-*: SR build/ship + decode/build + serialize + ghi Mongo (A1+A2+A3). sr: m\u1ed9t c\u00e2u INSERT ... bitmap_agg (B1).",
+   "title": "Thời gian xử lý trung bình mỗi tag (gold → store)",
+   "description": "Trung bình thời gian từ gold tới khi bitmap của 1 tag nằm trong đích. mongo-*: SR build/ship + decode/build + serialize + ghi Mongo (A1+A2+A3). sr: một câu INSERT ... bitmap_agg (B1).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 30,
+    "y": 23,
     "w": 6,
     "h": 8
    },
@@ -393,14 +314,14 @@
   {
    "id": 102,
    "type": "bargauge",
-   "title": "Th\u1eddi gian t\u1ea1o segment trung b\u00ecnh (fetch + compute + store)",
-   "description": "Trung b\u00ecnh th\u1eddi gian t\u1ea1o 1 segment tr\u1ecdn v\u1eb9n. mongo-*: t\u1ea3i 10 tag + t\u00ednh trong service + serialize + ghi Mongo. sr: m\u1ed9t c\u00e2u SQL compute v\u00e0 l\u01b0u trong SR.",
+   "title": "Thời gian tạo segment trung bình (fetch + compute + store)",
+   "description": "Trung bình thời gian tạo 1 segment trọn vẹn. mongo-*: tải 10 tag + tính trong service + serialize + ghi Mongo. sr: một câu SQL compute và lưu trong SR.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 6,
-    "y": 30,
+    "y": 23,
     "w": 6,
     "h": 8
    },
@@ -433,14 +354,14 @@
   {
    "id": 103,
    "type": "bargauge",
-   "title": "Th\u1eddi gian compute segment trung b\u00ecnh (ch\u1ec9 ph\u1ea7n t\u00ednh)",
-   "description": "Ch\u1ec9 ph\u1ea7n t\u00ednh to\u00e1n. mongo-*: A5 AND/OR/NOT trong memory c\u1ee7a service (ch\u01b0a g\u1ed3m fetch/serialize/ghi). sr: c\u1ea3 c\u00e2u SQL (SR kh\u00f4ng t\u00e1ch ri\u00eang compute v\u00e0 l\u01b0u).",
+   "title": "Thời gian compute segment trung bình (chỉ phần tính)",
+   "description": "Chỉ phần tính toán. mongo-*: A5 AND/OR/NOT trong memory của service (chưa gồm fetch/serialize/ghi). sr: cả câu SQL (SR không tách riêng compute và lưu).",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 30,
+    "y": 23,
     "w": 6,
     "h": 8
    },
@@ -473,14 +394,14 @@
   {
    "id": 104,
    "type": "bargauge",
-   "title": "Size trung b\u00ecnh m\u1ed7i tag",
-   "description": "K\u00edch th\u01b0\u1edbc bitmap m\u1ed9t tag. mongo-*: blob roaring trong Mongo. sr: bitmap SR serialize (bitmap_to_base64 gi\u1ea3i ng\u01b0\u1ee3c v\u1ec1 byte). Hai bi\u1ebfn th\u1ec3 mongo gi\u1ed1ng nhau v\u00ec c\u00f9ng d\u1eef li\u1ec7u.",
+   "title": "Size trung bình mỗi tag",
+   "description": "Kích thước bitmap một tag. mongo-*: blob roaring trong Mongo. sr: bitmap SR serialize (bitmap_to_base64 giải ngược về byte). Hai biến thể mongo giống nhau vì cùng dữ liệu.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 18,
-    "y": 30,
+    "y": 23,
     "w": 6,
     "h": 8
    },
@@ -513,14 +434,14 @@
   {
    "id": 105,
    "type": "bargauge",
-   "title": "Size trung b\u00ecnh m\u1ed7i segment",
-   "description": "K\u00edch th\u01b0\u1edbc bitmap m\u1ed9t segment, c\u00f9ng 600 \u0111i\u1ec1u ki\u1ec7n segment cho m\u1ecdi pipeline.",
+   "title": "Size trung bình mỗi segment",
+   "description": "Kích thước bitmap một segment, cùng 600 điều kiện segment cho mọi pipeline.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 38,
+    "y": 31,
     "w": 6,
     "h": 8
    },
@@ -553,14 +474,14 @@
   {
    "id": 106,
    "type": "timeseries",
-   "title": "Size t\u1eebng tag (byte)",
-   "description": "K\u00edch th\u01b0\u1edbc bitmap c\u1ee7a t\u1eebng tag 01..30 theo pipeline. Tag c\u00f3 t\u1ec9 l\u1ec7 th\u00e0nh vi\u00ean kh\u00e1c nhau n\u00ean size kh\u00e1c nhau.",
+   "title": "Size từng tag (byte)",
+   "description": "Kích thước bitmap của từng tag 01..30 theo pipeline. Tag có tỉ lệ thành viên khác nhau nên size khác nhau.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 6,
-    "y": 38,
+    "y": 31,
     "w": 18,
     "h": 8
    },
@@ -573,7 +494,7 @@
    "targets": [
     {
      "expr": "last_over_time(bench_tag_size_bytes{variant=~\".+\"}[6h])",
-     "legendFormat": "{{variant}} \u00b7 tag {{tag}}",
+     "legendFormat": "{{variant}} · tag {{tag}}",
      "refId": "A"
     }
    ]
@@ -581,14 +502,14 @@
   {
    "id": 107,
    "type": "timeseries",
-   "title": "Size segment (byte): l\u1ea7n g\u1ea7n nh\u1ea5t / l\u1edbn nh\u1ea5t",
-   "description": "K\u00edch th\u01b0\u1edbc l\u1edbn nh\u1ea5t c\u1ee7a m\u1ed9t segment cho t\u1eebng pipeline.",
+   "title": "Size segment (byte): lần gần nhất / lớn nhất",
+   "description": "Kích thước lớn nhất của một segment cho từng pipeline.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 46,
+    "y": 39,
     "w": 24,
     "h": 6
    },
@@ -601,7 +522,7 @@
    "targets": [
     {
      "expr": "last_over_time(bench_size_bytes_max{kind=\"segment\",variant=~\".+\"}[6h])",
-     "legendFormat": "max \u00b7 {{variant}}",
+     "legendFormat": "max · {{variant}}",
      "refId": "A"
     }
    ]
@@ -609,11 +530,11 @@
   {
    "id": 108,
    "type": "row",
-   "title": "1. T\u00ednh tag bitmap (ETL: gold \u2192 bitmap theo tag)",
+   "title": "1. Tính tag bitmap (ETL: gold → bitmap theo tag)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 52,
+    "y": 45,
     "w": 24,
     "h": 1
    },
@@ -622,14 +543,14 @@
   {
    "id": 109,
    "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
-   "description": "A1 = SR gom/ship d\u1eef li\u1ec7u v\u1ec1 service (agg: m\u1ed9t blob bitmap; rows: t\u1eebng actor_id r\u1ed3i service build), A2 = serialize, A3 = ghi blob Mongo; 'A tag total' = A1+A2+A3.",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) · lần gần nhất (ms)",
+   "description": "A1 = SR gom/ship dữ liệu về service (agg: một blob bitmap; rows: từng actor_id rồi service build), A2 = serialize, A3 = ghi blob Mongo; 'A tag total' = A1+A2+A3.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 53,
+    "y": 46,
     "w": 12,
     "h": 8
    },
@@ -650,14 +571,14 @@
   {
    "id": 110,
    "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
-   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) · trung bình tích luỹ (ms)",
+   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 53,
+    "y": 46,
     "w": 12,
     "h": 8
    },
@@ -678,14 +599,14 @@
   {
    "id": 111,
    "type": "timeseries",
-   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
-   "description": "A1 = SR gom/ship d\u1eef li\u1ec7u v\u1ec1 service (agg: m\u1ed9t blob bitmap; rows: t\u1eebng actor_id r\u1ed3i service build), A2 = serialize, A3 = ghi blob Mongo; 'A tag total' = A1+A2+A3.",
+   "title": "A-rows: Mongo, service tự build từ rows (export rows) · lần gần nhất (ms)",
+   "description": "A1 = SR gom/ship dữ liệu về service (agg: một blob bitmap; rows: từng actor_id rồi service build), A2 = serialize, A3 = ghi blob Mongo; 'A tag total' = A1+A2+A3.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 61,
+    "y": 54,
     "w": 12,
     "h": 8
    },
@@ -706,14 +627,14 @@
   {
    "id": 112,
    "type": "timeseries",
-   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
-   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "title": "A-rows: Mongo, service tự build từ rows (export rows) · trung bình tích luỹ (ms)",
+   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 61,
+    "y": 54,
     "w": 12,
     "h": 8
    },
@@ -734,14 +655,14 @@
   {
    "id": 113,
    "type": "timeseries",
-   "title": "B: StarRocks native \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
-   "description": "B1 = INSERT ... SELECT bitmap_agg ch\u1ea1y ho\u00e0n to\u00e0n trong SR; 'B tag total' = B1.",
+   "title": "B: StarRocks native · lần gần nhất (ms)",
+   "description": "B1 = INSERT ... SELECT bitmap_agg chạy hoàn toàn trong SR; 'B tag total' = B1.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 69,
+    "y": 62,
     "w": 12,
     "h": 8
    },
@@ -762,14 +683,14 @@
   {
    "id": 114,
    "type": "timeseries",
-   "title": "B: StarRocks native \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
-   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "title": "B: StarRocks native · trung bình tích luỹ (ms)",
+   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 69,
+    "y": 62,
     "w": 12,
     "h": 8
    },
@@ -790,11 +711,11 @@
   {
    "id": 115,
    "type": "row",
-   "title": "2. T\u00ednh segment (AND/OR/NOT tr\u00ean 10 tag)",
+   "title": "2. Tính segment (AND/OR/NOT trên 10 tag)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 77,
+    "y": 70,
     "w": 24,
     "h": 1
    },
@@ -803,14 +724,14 @@
   {
    "id": 116,
    "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
-   "description": "A4 = t\u1ea3i 10 tag t\u1eeb Mongo, A5 = t\u00ednh trong service, A6 = serialize, A7 = ghi segment Mongo; 'A total' l\u00e0 t\u1ed5ng b\u1ed1n b\u01b0\u1edbc.",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) · lần gần nhất (ms)",
+   "description": "A4 = tải 10 tag từ Mongo, A5 = tính trong service, A6 = serialize, A7 = ghi segment Mongo; 'A total' là tổng bốn bước.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 78,
+    "y": 71,
     "w": 12,
     "h": 8
    },
@@ -831,14 +752,14 @@
   {
    "id": 117,
    "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
-   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) · trung bình tích luỹ (ms)",
+   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 78,
+    "y": 71,
     "w": 12,
     "h": 8
    },
@@ -859,14 +780,14 @@
   {
    "id": 118,
    "type": "timeseries",
-   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
-   "description": "A4 = t\u1ea3i 10 tag t\u1eeb Mongo, A5 = t\u00ednh trong service, A6 = serialize, A7 = ghi segment Mongo; 'A total' l\u00e0 t\u1ed5ng b\u1ed1n b\u01b0\u1edbc.",
+   "title": "A-rows: Mongo, service tự build từ rows (export rows) · lần gần nhất (ms)",
+   "description": "A4 = tải 10 tag từ Mongo, A5 = tính trong service, A6 = serialize, A7 = ghi segment Mongo; 'A total' là tổng bốn bước.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 86,
+    "y": 79,
     "w": 12,
     "h": 8
    },
@@ -887,14 +808,14 @@
   {
    "id": 119,
    "type": "timeseries",
-   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
-   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "title": "A-rows: Mongo, service tự build từ rows (export rows) · trung bình tích luỹ (ms)",
+   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 86,
+    "y": 79,
     "w": 12,
     "h": 8
    },
@@ -915,14 +836,14 @@
   {
    "id": 120,
    "type": "timeseries",
-   "title": "B: StarRocks native \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
-   "description": "B total = m\u1ed9t c\u00e2u SQL t\u00ednh v\u00e0 l\u01b0u segment trong SR.",
+   "title": "B: StarRocks native · lần gần nhất (ms)",
+   "description": "B total = một câu SQL tính và lưu segment trong SR.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 94,
+    "y": 87,
     "w": 12,
     "h": 8
    },
@@ -943,14 +864,14 @@
   {
    "id": 121,
    "type": "timeseries",
-   "title": "B: StarRocks native \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
-   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "title": "B: StarRocks native · trung bình tích luỹ (ms)",
+   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 94,
+    "y": 87,
     "w": 12,
     "h": 8
    },
@@ -971,11 +892,11 @@
   {
    "id": 122,
    "type": "row",
-   "title": "3. \u0110\u1ecdc (contains / get users)",
+   "title": "3. Lấy toàn bộ user của segment (get all users)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 102,
+    "y": 95,
     "w": 24,
     "h": 1
    },
@@ -984,14 +905,14 @@
   {
    "id": 123,
    "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
-   "description": "\u0110\u1ecdc blob t\u1eeb Mongo r\u1ed3i ki\u1ec3m tra / l\u1ea5y user trong service.",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) · lần gần nhất (ms)",
+   "description": "3.1: get blob segment từ Mongo, giải mã và duyệt hết user trong service.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 103,
+    "y": 96,
     "w": 12,
     "h": 8
    },
@@ -1012,14 +933,14 @@
   {
    "id": 124,
    "type": "timeseries",
-   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
-   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) · trung bình tích luỹ (ms)",
+   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 103,
+    "y": 96,
     "w": 12,
     "h": 8
    },
@@ -1040,14 +961,14 @@
   {
    "id": 125,
    "type": "timeseries",
-   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
-   "description": "\u0110\u1ecdc blob t\u1eeb Mongo r\u1ed3i ki\u1ec3m tra / l\u1ea5y user trong service.",
+   "title": "A-rows: Mongo, service tự build từ rows (export rows) · lần gần nhất (ms)",
+   "description": "3.1: get blob segment từ Mongo, giải mã và duyệt hết user trong service.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 111,
+    "y": 104,
     "w": 12,
     "h": 8
    },
@@ -1068,14 +989,14 @@
   {
    "id": 126,
    "type": "timeseries",
-   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
-   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "title": "A-rows: Mongo, service tự build từ rows (export rows) · trung bình tích luỹ (ms)",
+   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 111,
+    "y": 104,
     "w": 12,
     "h": 8
    },
@@ -1096,14 +1017,14 @@
   {
    "id": 127,
    "type": "timeseries",
-   "title": "B: StarRocks native \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
-   "description": "bitmap_contains / unnest ngay trong SR.",
+   "title": "B: StarRocks native · lần gần nhất (ms)",
+   "description": "3.2: SELECT unnest(bitmap_to_array(bm)) đọc toàn bộ user của segment về service.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 119,
+    "y": 112,
     "w": 12,
     "h": 8
    },
@@ -1124,14 +1045,14 @@
   {
    "id": 128,
    "type": "timeseries",
-   "title": "B: StarRocks native \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
-   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "title": "B: StarRocks native · trung bình tích luỹ (ms)",
+   "description": "Trung bình từ đầu lần chạy (sum/count), mượt hơn số lần gần nhất.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 119,
+    "y": 112,
     "w": 12,
     "h": 8
    },
@@ -1152,11 +1073,11 @@
   {
    "id": 129,
    "type": "row",
-   "title": "4. T\u00e0i nguy\u00ean server (StarRocks, MongoDB)",
+   "title": "4. Tài nguyên server (StarRocks, MongoDB)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 127,
+    "y": 120,
     "w": 24,
     "h": 1
    },
@@ -1171,7 +1092,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 136,
+    "y": 129,
     "w": 12,
     "h": 8
    },
@@ -1188,7 +1109,7 @@
      "refId": "A"
     }
    ],
-   "description": "S\u1ed1 query/gi\u00e2y FE StarRocks nh\u1eadn. Ph\u1ea3n \u00e1nh t\u1ea3i c\u1ee7a pipeline B (SQL compute segment, contains, get users) v\u00e0 c\u00e1c c\u00e2u load/ETL. T\u0103ng v\u1ecdt khi b\u01b0\u1edbc segment/read ch\u1ea1y."
+   "description": "Số query/giây FE StarRocks nhận. Phản ánh tải của pipeline B (SQL tính segment, lấy toàn bộ user) và các câu load/ETL. Tăng vọt khi bước segment/read chạy."
   },
   {
    "id": 2,
@@ -1199,7 +1120,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 136,
+    "y": 129,
     "w": 12,
     "h": 8
    },
@@ -1221,7 +1142,7 @@
      "refId": "B"
     }
    ],
-   "description": "\u0110\u1ed9 tr\u1ec5 query \u1edf FE StarRocks: trung b\u00ecnh (sum/count) v\u00e0 p99. So v\u1edbi A total/B total trong b\u00e1o c\u00e1o benchmark \u0111\u1ec3 th\u1ea5y c\u00e2u n\u00e0o ch\u1eadm; p99 cao h\u01a1n nhi\u1ec1u so v\u1edbi avg ngh\u0129a l\u00e0 c\u00f3 query n\u1eb7ng (th\u01b0\u1eddng l\u00e0 load gold ho\u1eb7c B1)."
+   "description": "Độ trễ query ở FE StarRocks: trung bình (sum/count) và p99. So với A total/B total trong báo cáo benchmark để thấy câu nào chậm; p99 cao hơn nhiều so với avg nghĩa là có query nặng (thường là load gold hoặc B1)."
   },
   {
    "id": 3,
@@ -1232,7 +1153,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 144,
+    "y": 137,
     "w": 12,
     "h": 8
    },
@@ -1250,11 +1171,11 @@
     },
     {
      "expr": "starrocks_be_process_mem_bytes",
-     "legendFormat": "BE (ch\u1ec9 ti\u1ebfn tr\u00ecnh BE, n\u1eb1m trong container starrocks)",
+     "legendFormat": "BE (chỉ tiến trình BE, nằm trong container starrocks)",
      "refId": "B"
     }
    ],
-   "description": "RAM th\u1ef1c d\u00f9ng c\u1ee7a t\u1eebng container (docker stats). Gi\u1edbi h\u1ea1n: starrocks 6GB, mongo 6GB, service 3GB. \u0110\u01b0\u1eddng 'BE (ch\u1ec9 ti\u1ebfn tr\u00ecnh BE, n\u1eb1m trong container starrocks)' l\u00e0 m\u1ed9t ph\u1ea7n c\u1ee7a container ironman-starrocks-bitmap; ph\u1ea7n ch\u00eanh ch\u1ee7 y\u1ebfu l\u00e0 FE (JVM). So v\u1edbi gi\u1edbi h\u1ea1n th\u00ec d\u00f9ng \u0111\u01b0\u1eddng container."
+   "description": "RAM thực dùng của từng container (docker stats). Giới hạn: starrocks 6GB, mongo 6GB, service 3GB. Đường 'BE (chỉ tiến trình BE, nằm trong container starrocks)' là một phần của container ironman-starrocks-bitmap; phần chênh chủ yếu là FE (JVM). So với giới hạn thì dùng đường container."
   },
   {
    "id": 4,
@@ -1265,7 +1186,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 144,
+    "y": 137,
     "w": 12,
     "h": 8
    },
@@ -1284,7 +1205,7 @@
      "refId": "A"
     }
    ],
-   "description": "CPU th\u1ef1c d\u00f9ng c\u1ee7a t\u1eebng container, \u0111o b\u1eb1ng docker stats (1 = 1 core, t\u1ed1i \u0111a 10 core c\u1ee7a Docker). So starrocks-bitmap v\u1edbi mongo-bitmap \u0111\u1ec3 th\u1ea5y pipeline n\u00e0o t\u1ed1n CPU h\u01a1n \u1edf ph\u00eda server. Ch\u01b0a g\u1ed3m CPU c\u1ee7a service benchmark (Java ch\u1ea1y tr\u00ean host, ngo\u00e0i Docker)."
+   "description": "CPU thực dùng của từng container, đo bằng docker stats (1 = 1 core, tối đa 10 core của Docker). So starrocks-bitmap với mongo-bitmap để thấy pipeline nào tốn CPU hơn ở phía server. Chưa gồm CPU của service benchmark (Java chạy trên host, ngoài Docker)."
   },
   {
    "id": 5,
@@ -1295,7 +1216,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 152,
+    "y": 145,
     "w": 12,
     "h": 8
    },
@@ -1312,7 +1233,7 @@
      "refId": "A"
     }
    ],
-   "description": "S\u1ed1 thao t\u00e1c/gi\u00e2y tr\u00ean MongoDB theo lo\u1ea1i (insert/query/update/getmore...). Ph\u1ea3n \u00e1nh pipeline A: ghi blob tag/segment (insert) v\u00e0 \u0111\u1ecdc blob (query/getmore) qua GridFS."
+   "description": "Số thao tác/giây trên MongoDB theo loại (insert/query/update/getmore...). Phản ánh pipeline A: ghi blob tag/segment (insert) và đọc blob (query/getmore) qua GridFS."
   },
   {
    "id": 6,
@@ -1323,7 +1244,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 152,
+    "y": 145,
     "w": 12,
     "h": 8
    },
@@ -1345,7 +1266,7 @@
      "refId": "B"
     }
    ],
-   "description": "L\u01b0u l\u01b0\u1ee3ng m\u1ea1ng v\u00e0o/ra MongoDB (byte/gi\u00e2y). In = ghi bitmap tag/segment, out = service t\u1ea3i blob tag \u0111\u1ec3 t\u00ednh segment. \u0110\u00e2y l\u00e0 chi ph\u00ed di chuy\u1ec3n d\u1eef li\u1ec7u m\u00e0 pipeline B kh\u00f4ng c\u00f3."
+   "description": "Lưu lượng mạng vào/ra MongoDB (byte/giây). In = ghi bitmap tag/segment, out = service tải blob tag để tính segment. Đây là chi phí di chuyển dữ liệu mà pipeline B không có."
   },
   {
    "id": 7,
@@ -1356,7 +1277,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 160,
+    "y": 153,
     "w": 12,
     "h": 8
    },
@@ -1373,7 +1294,7 @@
      "refId": "A"
     }
    ],
-   "description": "RAM resident c\u1ee7a mongod (MB). Mongo cache blob GridFS n\u00ean t\u0103ng d\u1ea7n theo dung l\u01b0\u1ee3ng d\u1eef li\u1ec7u; so v\u1edbi RAM c\u1ee7a SR BE \u0111\u1ec3 th\u1ea5y chi ph\u00ed b\u1ed9 nh\u1edb c\u1ee7a hai h\u01b0\u1edbng."
+   "description": "RAM resident của mongod (MB). Mongo cache blob GridFS nên tăng dần theo dung lượng dữ liệu; so với RAM của SR BE để thấy chi phí bộ nhớ của hai hướng."
   },
   {
    "id": 8,
@@ -1384,7 +1305,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 160,
+    "y": 153,
     "w": 12,
     "h": 8
    },
@@ -1401,19 +1322,19 @@
      "refId": "A"
     }
    ],
-   "description": "Dung l\u01b0\u1ee3ng d\u1eef li\u1ec7u database bm_bench (byte): t\u1ed5ng blob bitmap tag v\u00e0 segment trong GridFS. So v\u1edbi k\u00edch th\u01b0\u1edbc bitmap trong SR \u0111\u1ec3 so chi ph\u00ed l\u01b0u tr\u1eef."
+   "description": "Dung lượng dữ liệu database bm_bench (byte): tổng blob bitmap tag và segment trong GridFS. So với kích thước bitmap trong SR để so chi phí lưu trữ."
   },
   {
    "id": 9,
    "type": "timeseries",
    "title": "SR query latency percentiles (ms)",
-   "description": "Ph\u00e2n v\u1ecb \u0111\u1ed9 tr\u1ec5 query \u1edf FE StarRocks (p75 \u2192 p99.9). Kho\u1ea3ng c\u00e1ch gi\u1eefa p75 v\u00e0 p99.9 cho th\u1ea5y \u0111\u1ed9 l\u1ec7ch \u0111u\u00f4i: c\u00e2u nh\u1eb9 (contains, unnest) n\u1eb1m \u1edf p75, c\u00e2u n\u1eb7ng (load gold, B1 bitmap_agg) k\u00e9o p99/p99.9 l\u00ean.",
+   "description": "Phân vị độ trễ query ở FE StarRocks (p75 → p99.9). Khoảng cách giữa p75 và p99.9 cho thấy độ lệch đuôi: câu nhẹ (tính segment) nằm ở p75, câu nặng (load gold, B1 bitmap_agg) kéo p99/p99.9 lên.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 168,
+    "y": 161,
     "w": 12,
     "h": 8
    },
@@ -1455,13 +1376,13 @@
    "id": 10,
    "type": "timeseries",
    "title": "Mongo op latency avg (ms)",
-   "description": "\u0110\u1ed9 tr\u1ec5 trung b\u00ecnh m\u1ed7i thao t\u00e1c tr\u00ean MongoDB theo lo\u1ea1i (reads = t\u1ea3i blob tag/segment, writes = ghi blob). L\u00e0 ph\u1ea7n Mongo c\u1ee7a A4/A3/A7; c\u1ed9ng th\u00eam th\u1eddi gian compute \u1edf service \u0111\u1ec3 ra A total.",
+   "description": "Độ trễ trung bình mỗi thao tác trên MongoDB theo loại (reads = tải blob tag/segment, writes = ghi blob). Là phần Mongo của A4/A3/A7; cộng thêm thời gian compute ở service để ra A total.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 168,
+    "y": 161,
     "w": 12,
     "h": 8
    },
@@ -1493,13 +1414,13 @@
    "id": 11,
    "type": "timeseries",
    "title": "SR vs Mongo latency (ms)",
-   "description": "\u0110\u1eb7t c\u1ea1nh nhau \u0111\u1ed9 tr\u1ec5 ph\u00eda SR (pipeline B) v\u00e0 Mongo (pipeline A) \u0111\u1ec3 so tr\u1ef1c quan. L\u01b0u \u00fd \u0111\u00e2y l\u00e0 \u0111\u1ed9 tr\u1ec5 ph\u00eda server, ch\u01b0a g\u1ed3m compute AND/OR/NOT v\u00e0 gi\u1ea3i m\u00e3 bitmap \u1edf service; s\u1ed1 end-to-end A vs B xem b\u00e1o c\u00e1o benchmark.",
+   "description": "Đặt cạnh nhau độ trễ phía SR (pipeline B) và Mongo (pipeline A) để so trực quan. Lưu ý đây là độ trễ phía server, chưa gồm compute AND/OR/NOT và giải mã bitmap ở service; số end-to-end A vs B xem báo cáo benchmark.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 176,
+    "y": 169,
     "w": 12,
     "h": 8
    },
@@ -1530,14 +1451,14 @@
   {
    "id": 301,
    "type": "timeseries",
-   "title": "Network nh\u1eadn theo container (byte/s)",
-   "description": "L\u01b0u l\u01b0\u1ee3ng m\u1ea1ng v\u00e0o t\u1eebng container (docker stats). Service nh\u1eadn g\u00ec t\u1eeb StarRocks v\u00e0 Mongo; StarRocks nh\u1eadn g\u00ec t\u1eeb service. Pipeline Mongo rows k\u00e9o t\u1eebng actor_id t\u1eeb StarRocks v\u1ec1 service n\u00ean service nh\u1eadn nhi\u1ec1u.",
+   "title": "Network nhận theo container (byte/s)",
+   "description": "Lưu lượng mạng vào từng container (docker stats). Service nhận gì từ StarRocks và Mongo; StarRocks nhận gì từ service. Pipeline Mongo rows kéo từng actor_id từ StarRocks về service nên service nhận nhiều.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 128,
+    "y": 121,
     "w": 12,
     "h": 8
    },
@@ -1558,14 +1479,14 @@
   {
    "id": 302,
    "type": "timeseries",
-   "title": "Network g\u1eedi theo container (byte/s)",
-   "description": "L\u01b0u l\u01b0\u1ee3ng m\u1ea1ng ra t\u1eeb t\u1eebng container. starrocks-bitmap g\u1eedi d\u1eef li\u1ec7u gold/bitmap v\u1ec1 service; mongo-bitmap g\u1eedi blob tag khi service t\u1ea3i 10 tag; service g\u1eedi blob c\u1ea7n ghi v\u00e0o Mongo.",
+   "title": "Network gửi theo container (byte/s)",
+   "description": "Lưu lượng mạng ra từ từng container. starrocks-bitmap gửi dữ liệu gold/bitmap về service; mongo-bitmap gửi blob tag khi service tải 10 tag; service gửi blob cần ghi vào Mongo.",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 128,
+    "y": 121,
     "w": 12,
     "h": 8
    },
