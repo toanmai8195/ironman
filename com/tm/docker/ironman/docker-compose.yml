@@ -17,6 +17,7 @@
 # Thử nghiệm 3 — star-rock-bitmap (profile `bitmap`, độc lập, không cần stack Debezium/Flink): StarRocks + MongoDB cho benchmark bitmap
 #   docker compose -f com/tm/docker/ironman/docker-compose.yml --profile bitmap up -d --no-deps \
 #     starrocks-bitmap mongo-bitmap mongo-exporter-bitmap prometheus-bitmap grafana-bitmap   # --no-deps: postgres/kafka/... không có profile nên sẽ bị kéo theo
+#   Giới hạn: starrocks 3 CPU/6GB · mongo 3 CPU/6GB · service (profile bench) 2 CPU/3GB. Chạy cả bộ: com/tm/star-rock-bitmap/run_all.sh
 #   Grafana http://localhost:23000 (dashboard bitmap-bench) · Prometheus http://localhost:29090
 #   bazel run //com/tm/star-rock-bitmap:bench -- all --tags 3 --universe 1000000 \
 #     --sr 'jdbc:mysql://127.0.0.1:29030/?sessionVariables=query_timeout=7200' --mongo mongodb://127.0.0.1:37017
@@ -301,6 +302,9 @@ services:
     image: starrocks/allin1-ubuntu:3.5.8
     container_name: ironman-starrocks-bitmap
     profiles: ["bitmap"]
+    cpus: 3
+    mem_limit: 6g
+    memswap_limit: 6g
     ports: ["29030:9030", "28030:8030"]
     volumes:
       - starrocks-bitmap-data:/data/deploy/starrocks/be/storage
@@ -315,6 +319,9 @@ services:
     image: mongo:7.0
     container_name: ironman-mongo-bitmap
     profiles: ["bitmap"]
+    cpus: 3
+    mem_limit: 6g
+    memswap_limit: 6g
     ports: ["37017:27017"]
     volumes:
       - mongo-bitmap-data:/data/db
@@ -323,6 +330,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+  # Service benchmark (Java) chạy trong container để giới hạn và đo CPU/RAM như StarRocks và Mongo.
+  # Jar: bazel build //com/tm/star-rock-bitmap:bench_deploy.jar && cp bazel-bin/com/tm/star-rock-bitmap/bench_deploy.jar com/tm/docker/ironman/bitmap/bench.jar
+  # Chạy: docker compose -f com/tm/docker/ironman/docker-compose.yml --profile bench run --rm --no-deps --service-ports --name ironman-bench-bitmap bench-bitmap <lệnh> <flag>
+  # Trong network compose: --sr jdbc:mysql://starrocks-bitmap:9030/?sessionVariables=query_timeout=7200 --mongo mongodb://mongo-bitmap:27017
+  bench-bitmap:
+    image: eclipse-temurin:17-jre
+    profiles: ["bench"]
+    cpus: 2
+    mem_limit: 3g
+    memswap_limit: 3g
+    ports: ["9464:9464"]
+    volumes:
+      - ./bitmap/bench.jar:/app/bench.jar:ro
+    entrypoint: ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/bench.jar"]
 
   # Exporter cho MongoDB (metrics :9216).
   mongo-exporter-bitmap:

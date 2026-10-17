@@ -80,6 +80,14 @@ final class Stats {
       sb.append("bench_latency_ms_last").append(l).append(' ').append(a[2] / 1e6).append('\n');
       sb.append("bench_latency_ms_sum").append(l).append(' ').append(a[1] / 1e6).append('\n');
       sb.append("bench_latency_ms_count").append(l).append(' ').append(a[0]).append('\n');
+      List<Long> sorted = new ArrayList<>(nanos.get(n));
+      sorted.sort(Long::compare);
+      for (double q : new double[] {0.5, 0.9, 0.99}) {
+        sb.append("bench_latency_ms_quantile")
+            .append(l, 0, l.length() - 1)
+            .append(",quantile=\"").append(q).append("\"} ")
+            .append(pct(sorted, q) / 1e6).append('\n');
+      }
     }
     for (var e : sizes.entrySet()) {
       String[] k = e.getKey().split("\\|");
@@ -114,16 +122,22 @@ final class Stats {
   }
 
   synchronized void print() {
-    System.out.printf("%n%-34s %5s %10s %10s %10s %10s%n", "metric", "n", "min", "p50", "p95", "max");
+    System.out.printf("%n%-34s %5s %10s %10s %10s %10s %10s %10s%n", "metric", "n", "avg", "min", "p50", "p90", "p99", "max");
     for (var e : nanos.entrySet()) {
       List<Long> v = new ArrayList<>(e.getValue());
       v.sort(Long::compare);
       int n = v.size();
+      double avg = v.stream().mapToLong(Long::longValue).sum() / (double) n;
       System.out.printf(
-          "%-34s %5d %10s %10s %10s %10s%n",
-          e.getKey(), n, fmt(v.get(0)), fmt(v.get((int) ((n - 1) * 0.5))),
-          fmt(v.get((int) ((n - 1) * 0.95))), fmt(v.get(n - 1)));
+          "%-34s %5d %10s %10s %10s %10s %10s %10s%n",
+          e.getKey(), n, fmt((long) avg), fmt(v.get(0)), fmt(pct(v, 0.5)), fmt(pct(v, 0.9)), fmt(pct(v, 0.99)), fmt(v.get(n - 1)));
     }
+  }
+
+  /** Phân vị q (0..1) theo nearest-rank trên danh sách đã sort. */
+  private static long pct(List<Long> sorted, double q) {
+    int n = sorted.size();
+    return sorted.get(Math.max(0, (int) Math.ceil(q * n) - 1));
   }
 
   private static String fmt(long ns) {

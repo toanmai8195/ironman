@@ -9,13 +9,342 @@
  },
  "panels": [
   {
+   "id": 200,
+   "type": "row",
+   "title": "Ch\u1ec9 s\u1ed1 ch\u00ednh: trung b\u00ecnh, p50, p90, p99 theo pipeline (mongo-rows \u00b7 mongo-agg \u00b7 sr)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 201,
+   "type": "table",
+   "title": "1. Th\u1eddi gian x\u1eed l\u00fd m\u1ed9t tag: t\u1eeb gold \u0111\u1ebfn khi data s\u1eb5n s\u00e0ng tr\u00ean Mongo ho\u1eb7c StarRocks",
+   "description": "\u0110o t\u1eeb l\u00fac b\u1eaft \u0111\u1ea7u t\u00ednh tag t\u1eeb gold \u0111\u1ebfn khi bitmap \u0111\u00e3 ghi xong v\u00e0 s\u1eb5n s\u00e0ng. mongo-*: SR build/ship + decode/build + serialize + ghi Mongo (A tag total). sr: INSERT ... bitmap_agg (B tag total).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 1,
+    "w": 24,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A|B) tag total.*\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A|B) tag total.*\",variant=~\".+\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A|B) tag total.*\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "B"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A|B) tag total.*\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "C"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A|B) tag total.*\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "D"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "variant": "Pipeline",
+       "Value #A": "avg",
+       "Value #B": "p50",
+       "Value #C": "p90",
+       "Value #D": "p99"
+      },
+      "indexByName": {
+       "variant": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 202,
+   "type": "table",
+   "title": "2. Th\u1eddi gian t\u1ea1o m\u1ed9t segment: t\u1eeb l\u00fac b\u1eaft \u0111\u1ea7u l\u1ea5y d\u1eef li\u1ec7u \u0111\u1ebfn khi segment s\u1eb5n s\u00e0ng",
+   "description": "mongo-*: t\u1eeb l\u00fac t\u1ea3i 10 tag t\u1eeb Mongo \u0111\u1ebfn khi segment \u0111\u00e3 ghi xong v\u00e0o Mongo (fetch + compute + serialize + put). sr: t\u1eeb l\u00fac g\u1eedi c\u00e2u SQL \u0111\u1ebfn khi segment n\u1eb1m trong b\u1ea3ng segment_bitmap (B total).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 8,
+    "w": 24,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A total.*|B total.*)\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A total.*|B total.*)\",variant=~\".+\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A total.*|B total.*)\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "B"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A total.*|B total.*)\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "C"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A total.*|B total.*)\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "D"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "variant": "Pipeline",
+       "Value #A": "avg",
+       "Value #B": "p50",
+       "Value #C": "p90",
+       "Value #D": "p99"
+      },
+      "indexByName": {
+       "variant": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 203,
+   "type": "table",
+   "title": "3a. Check contains (m\u1ed9t user c\u00f3 trong segment kh\u00f4ng)",
+   "description": "mongo-*: get blob segment + deserialize + contains trong service. sr: SELECT bitmap_contains.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 15,
+    "w": 24,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A contains.*|B contains.*)\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A contains.*|B contains.*)\",variant=~\".+\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A contains.*|B contains.*)\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "B"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A contains.*|B contains.*)\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "C"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A contains.*|B contains.*)\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "D"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "variant": "Pipeline",
+       "Value #A": "avg",
+       "Value #B": "p50",
+       "Value #C": "p90",
+       "Value #D": "p99"
+      },
+      "indexByName": {
+       "variant": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 204,
+   "type": "table",
+   "title": "3b. L\u1ea5y 1000 user c\u1ee7a segment",
+   "description": "mongo-*: get blob + deserialize + l\u1ea5y 1 trang 1000 user. sr: SELECT ... unnest(bitmap_to_array) LIMIT 1000.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 22,
+    "w": 24,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\"}[6h])/last_over_time(bench_latency_ms_count{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\",quantile=\"0.5\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "B"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\",quantile=\"0.9\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "C"
+    },
+    {
+     "expr": "max by (variant) (last_over_time(bench_latency_ms_quantile{step=~\"(A get 1000.*|B get 1000.*)\",variant=~\".+\",quantile=\"0.99\"}[6h]))",
+     "instant": true,
+     "format": "table",
+     "refId": "D"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "variant": "Pipeline",
+       "Value #A": "avg",
+       "Value #B": "p50",
+       "Value #C": "p90",
+       "Value #D": "p99"
+      },
+      "indexByName": {
+       "variant": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4
+      }
+     }
+    }
+   ]
+  },
+  {
    "id": 100,
    "type": "row",
    "title": "0. T\u1ed5ng quan 3 pipeline (mongo rows \u00b7 mongo agg \u00b7 sr) \u2014 c\u00f9ng data, c\u00f9ng tag/attribute, c\u00f9ng \u0111i\u1ec1u ki\u1ec7n v\u00e0 s\u1ed1 segment",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 0,
+    "y": 29,
     "w": 24,
     "h": 1
    },
@@ -31,7 +360,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 1,
+    "y": 30,
     "w": 6,
     "h": 8
    },
@@ -71,7 +400,7 @@
    },
    "gridPos": {
     "x": 6,
-    "y": 1,
+    "y": 30,
     "w": 6,
     "h": 8
    },
@@ -111,7 +440,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 1,
+    "y": 30,
     "w": 6,
     "h": 8
    },
@@ -151,7 +480,7 @@
    },
    "gridPos": {
     "x": 18,
-    "y": 1,
+    "y": 30,
     "w": 6,
     "h": 8
    },
@@ -191,7 +520,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 9,
+    "y": 38,
     "w": 6,
     "h": 8
    },
@@ -231,7 +560,7 @@
    },
    "gridPos": {
     "x": 6,
-    "y": 9,
+    "y": 38,
     "w": 18,
     "h": 8
    },
@@ -259,7 +588,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 17,
+    "y": 46,
     "w": 24,
     "h": 6
    },
@@ -284,7 +613,7 @@
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 23,
+    "y": 52,
     "w": 24,
     "h": 1
    },
@@ -300,7 +629,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 24,
+    "y": 53,
     "w": 12,
     "h": 8
    },
@@ -328,7 +657,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 24,
+    "y": 53,
     "w": 12,
     "h": 8
    },
@@ -356,7 +685,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 32,
+    "y": 61,
     "w": 12,
     "h": 8
    },
@@ -384,7 +713,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 32,
+    "y": 61,
     "w": 12,
     "h": 8
    },
@@ -412,7 +741,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 40,
+    "y": 69,
     "w": 12,
     "h": 8
    },
@@ -440,7 +769,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 40,
+    "y": 69,
     "w": 12,
     "h": 8
    },
@@ -465,7 +794,7 @@
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 48,
+    "y": 77,
     "w": 24,
     "h": 1
    },
@@ -481,7 +810,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 49,
+    "y": 78,
     "w": 12,
     "h": 8
    },
@@ -509,7 +838,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 49,
+    "y": 78,
     "w": 12,
     "h": 8
    },
@@ -537,7 +866,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 57,
+    "y": 86,
     "w": 12,
     "h": 8
    },
@@ -565,7 +894,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 57,
+    "y": 86,
     "w": 12,
     "h": 8
    },
@@ -593,7 +922,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 65,
+    "y": 94,
     "w": 12,
     "h": 8
    },
@@ -621,7 +950,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 65,
+    "y": 94,
     "w": 12,
     "h": 8
    },
@@ -646,7 +975,7 @@
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 73,
+    "y": 102,
     "w": 24,
     "h": 1
    },
@@ -662,7 +991,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 74,
+    "y": 103,
     "w": 12,
     "h": 8
    },
@@ -690,7 +1019,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 74,
+    "y": 103,
     "w": 12,
     "h": 8
    },
@@ -718,7 +1047,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 82,
+    "y": 111,
     "w": 12,
     "h": 8
    },
@@ -746,7 +1075,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 82,
+    "y": 111,
     "w": 12,
     "h": 8
    },
@@ -774,7 +1103,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 90,
+    "y": 119,
     "w": 12,
     "h": 8
    },
@@ -802,7 +1131,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 90,
+    "y": 119,
     "w": 12,
     "h": 8
    },
@@ -827,7 +1156,7 @@
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 98,
+    "y": 127,
     "w": 24,
     "h": 1
    },
@@ -842,7 +1171,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 99,
+    "y": 136,
     "w": 12,
     "h": 8
    },
@@ -870,7 +1199,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 99,
+    "y": 136,
     "w": 12,
     "h": 8
    },
@@ -897,13 +1226,13 @@
   {
    "id": 3,
    "type": "timeseries",
-   "title": "SR BE process memory",
+   "title": "RAM theo container",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 0,
-    "y": 107,
+    "y": 144,
     "w": 12,
     "h": 8
    },
@@ -915,40 +1244,47 @@
    },
    "targets": [
     {
-     "expr": "starrocks_be_process_mem_bytes",
-     "legendFormat": "process",
+     "expr": "container_mem_bytes{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}",
+     "legendFormat": "{{container}}",
      "refId": "A"
+    },
+    {
+     "expr": "starrocks_be_process_mem_bytes",
+     "legendFormat": "BE (ch\u1ec9 ti\u1ebfn tr\u00ecnh BE, n\u1eb1m trong container starrocks)",
+     "refId": "B"
     }
    ],
-   "description": "RAM ti\u1ebfn tr\u00ecnh BE StarRocks. T\u0103ng m\u1ea1nh \u1edf b\u01b0\u1edbc load gold v\u00e0 B1 (bitmap_agg). G\u1ea7n gi\u1edbi h\u1ea1n RAM Docker th\u00ec query c\u00f3 th\u1ec3 b\u1ecb kill."
+   "description": "RAM th\u1ef1c d\u00f9ng c\u1ee7a t\u1eebng container (docker stats). Gi\u1edbi h\u1ea1n: starrocks 6GB, mongo 6GB, service 3GB. \u0110\u01b0\u1eddng 'BE (ch\u1ec9 ti\u1ebfn tr\u00ecnh BE, n\u1eb1m trong container starrocks)' l\u00e0 m\u1ed9t ph\u1ea7n c\u1ee7a container ironman-starrocks-bitmap; ph\u1ea7n ch\u00eanh ch\u1ee7 y\u1ebfu l\u00e0 FE (JVM). So v\u1edbi gi\u1edbi h\u1ea1n th\u00ec d\u00f9ng \u0111\u01b0\u1eddng container."
   },
   {
    "id": 4,
    "type": "timeseries",
-   "title": "SR BE CPU",
+   "title": "CPU theo container (core)",
    "datasource": {
     "type": "prometheus"
    },
    "gridPos": {
     "x": 12,
-    "y": 107,
+    "y": 144,
     "w": 12,
     "h": 8
    },
    "fieldConfig": {
     "defaults": {
-     "unit": "short"
+     "unit": "short",
+     "decimals": 2,
+     "min": 0
     },
     "overrides": []
    },
    "targets": [
     {
-     "expr": "rate(starrocks_be_cpu[1m])",
-     "legendFormat": "{{mode}}",
+     "expr": "container_cpu_cores{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}",
+     "legendFormat": "{{container}}",
      "refId": "A"
     }
    ],
-   "description": "CPU c\u1ee7a BE theo t\u1eebng mode (user/system/idle/iowait...). Mode user cao = \u0111ang t\u00ednh to\u00e1n (sinh gold, bitmap_agg, AND/OR/NOT bitmap); iowait cao = ngh\u1ebdn \u0111\u0129a."
+   "description": "CPU th\u1ef1c d\u00f9ng c\u1ee7a t\u1eebng container, \u0111o b\u1eb1ng docker stats (1 = 1 core, t\u1ed1i \u0111a 10 core c\u1ee7a Docker). So starrocks-bitmap v\u1edbi mongo-bitmap \u0111\u1ec3 th\u1ea5y pipeline n\u00e0o t\u1ed1n CPU h\u01a1n \u1edf ph\u00eda server. Ch\u01b0a g\u1ed3m CPU c\u1ee7a service benchmark (Java ch\u1ea1y tr\u00ean host, ngo\u00e0i Docker)."
   },
   {
    "id": 5,
@@ -959,7 +1295,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 115,
+    "y": 152,
     "w": 12,
     "h": 8
    },
@@ -987,7 +1323,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 115,
+    "y": 152,
     "w": 12,
     "h": 8
    },
@@ -1020,7 +1356,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 123,
+    "y": 160,
     "w": 12,
     "h": 8
    },
@@ -1048,7 +1384,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 123,
+    "y": 160,
     "w": 12,
     "h": 8
    },
@@ -1077,7 +1413,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 131,
+    "y": 168,
     "w": 12,
     "h": 8
    },
@@ -1125,7 +1461,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 131,
+    "y": 168,
     "w": 12,
     "h": 8
    },
@@ -1163,7 +1499,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 139,
+    "y": 176,
     "w": 12,
     "h": 8
    },
@@ -1188,6 +1524,62 @@
      "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"writes\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"writes\"}[1m]),1)/1000",
      "legendFormat": "Mongo write avg",
      "refId": "C"
+    }
+   ]
+  },
+  {
+   "id": 301,
+   "type": "timeseries",
+   "title": "Network nh\u1eadn theo container (byte/s)",
+   "description": "L\u01b0u l\u01b0\u1ee3ng m\u1ea1ng v\u00e0o t\u1eebng container (docker stats). Service nh\u1eadn g\u00ec t\u1eeb StarRocks v\u00e0 Mongo; StarRocks nh\u1eadn g\u00ec t\u1eeb service. Pipeline Mongo rows k\u00e9o t\u1eebng actor_id t\u1eeb StarRocks v\u1ec1 service n\u00ean service nh\u1eadn nhi\u1ec1u.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 128,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(container_net_rx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[30s])",
+     "legendFormat": "{{container}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 302,
+   "type": "timeseries",
+   "title": "Network g\u1eedi theo container (byte/s)",
+   "description": "L\u01b0u l\u01b0\u1ee3ng m\u1ea1ng ra t\u1eeb t\u1eebng container. starrocks-bitmap g\u1eedi d\u1eef li\u1ec7u gold/bitmap v\u1ec1 service; mongo-bitmap g\u1eedi blob tag khi service t\u1ea3i 10 tag; service g\u1eedi blob c\u1ea7n ghi v\u00e0o Mongo.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 128,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(container_net_tx_bytes_total{container=~\"ironman-(starrocks|mongo|bench)-bitmap\"}[30s])",
+     "legendFormat": "{{container}}",
+     "refId": "A"
     }
    ]
   }

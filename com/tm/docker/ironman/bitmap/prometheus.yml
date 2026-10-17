@@ -17,3 +17,7 @@ scrape_configs:
   - job_name: bench
     scrape_interval: 2s
     static_configs: [{ targets: ["host.docker.internal:9464"] }]
+  # CPU/RAM riêng từng container (docker_stats_exporter.py chạy trên host)
+  - job_name: docker-stats
+    scrape_interval: 2s
+    static_configs: [{ targets: ["host.docker.internal:9465"] }]
