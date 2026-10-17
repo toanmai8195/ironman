@@ -1,0 +1,1195 @@
+{
+ "title": "star-rock-bitmap benchmark",
+ "uid": "bitmap-bench",
+ "schemaVersion": 39,
+ "refresh": "5s",
+ "time": {
+  "from": "now-3h",
+  "to": "now"
+ },
+ "panels": [
+  {
+   "id": 100,
+   "type": "row",
+   "title": "0. T\u1ed5ng quan 3 pipeline (mongo rows \u00b7 mongo agg \u00b7 sr) \u2014 c\u00f9ng data, c\u00f9ng tag/attribute, c\u00f9ng \u0111i\u1ec1u ki\u1ec7n v\u00e0 s\u1ed1 segment",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 101,
+   "type": "bargauge",
+   "title": "Th\u1eddi gian x\u1eed l\u00fd trung b\u00ecnh m\u1ed7i tag (gold \u2192 store)",
+   "description": "Trung b\u00ecnh th\u1eddi gian t\u1eeb gold t\u1edbi khi bitmap c\u1ee7a 1 tag n\u1eb1m trong \u0111\u00edch. mongo-*: SR build/ship + decode/build + serialize + ghi Mongo (A1+A2+A3). sr: m\u1ed9t c\u00e2u INSERT ... bitmap_agg (B1).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 1,
+    "w": 6,
+    "h": 8
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A|B) tag total.*\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_latency_ms_count{step=~\"(A|B) tag total.*\",variant=~\".+\"}[6h]))",
+     "legendFormat": "{{variant}}",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 102,
+   "type": "bargauge",
+   "title": "Th\u1eddi gian t\u1ea1o segment trung b\u00ecnh (fetch + compute + store)",
+   "description": "Trung b\u00ecnh th\u1eddi gian t\u1ea1o 1 segment tr\u1ecdn v\u1eb9n. mongo-*: t\u1ea3i 10 tag + t\u00ednh trong service + serialize + ghi Mongo. sr: m\u1ed9t c\u00e2u SQL compute v\u00e0 l\u01b0u trong SR.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 1,
+    "w": 6,
+    "h": 8
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A total.*|B total.*)\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_latency_ms_count{step=~\"(A total.*|B total.*)\",variant=~\".+\"}[6h]))",
+     "legendFormat": "{{variant}}",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 103,
+   "type": "bargauge",
+   "title": "Th\u1eddi gian compute segment trung b\u00ecnh (ch\u1ec9 ph\u1ea7n t\u00ednh)",
+   "description": "Ch\u1ec9 ph\u1ea7n t\u00ednh to\u00e1n. mongo-*: A5 AND/OR/NOT trong memory c\u1ee7a service (ch\u01b0a g\u1ed3m fetch/serialize/ghi). sr: c\u1ea3 c\u00e2u SQL (SR kh\u00f4ng t\u00e1ch ri\u00eang compute v\u00e0 l\u01b0u).",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 1,
+    "w": 6,
+    "h": 8
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (variant) (last_over_time(bench_latency_ms_sum{step=~\"(A5 compute.*|B total.*)\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_latency_ms_count{step=~\"(A5 compute.*|B total.*)\",variant=~\".+\"}[6h]))",
+     "legendFormat": "{{variant}}",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 104,
+   "type": "bargauge",
+   "title": "Size trung b\u00ecnh m\u1ed7i tag",
+   "description": "K\u00edch th\u01b0\u1edbc bitmap m\u1ed9t tag. mongo-*: blob roaring trong Mongo. sr: bitmap SR serialize (bitmap_to_base64 gi\u1ea3i ng\u01b0\u1ee3c v\u1ec1 byte). Hai bi\u1ebfn th\u1ec3 mongo gi\u1ed1ng nhau v\u00ec c\u00f9ng d\u1eef li\u1ec7u.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 1,
+    "w": 6,
+    "h": 8
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (variant) (last_over_time(bench_size_bytes_sum{kind=\"tag\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_size_bytes_count{kind=\"tag\",variant=~\".+\"}[6h]))",
+     "legendFormat": "{{variant}}",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 105,
+   "type": "bargauge",
+   "title": "Size trung b\u00ecnh m\u1ed7i segment",
+   "description": "K\u00edch th\u01b0\u1edbc bitmap m\u1ed9t segment, c\u00f9ng 600 \u0111i\u1ec1u ki\u1ec7n segment cho m\u1ecdi pipeline.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 9,
+    "w": 6,
+    "h": 8
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "sum by (variant) (last_over_time(bench_size_bytes_sum{kind=\"segment\",variant=~\".+\"}[6h]))/sum by (variant) (last_over_time(bench_size_bytes_count{kind=\"segment\",variant=~\".+\"}[6h]))",
+     "legendFormat": "{{variant}}",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 106,
+   "type": "timeseries",
+   "title": "Size t\u1eebng tag (byte)",
+   "description": "K\u00edch th\u01b0\u1edbc bitmap c\u1ee7a t\u1eebng tag 01..30 theo pipeline. Tag c\u00f3 t\u1ec9 l\u1ec7 th\u00e0nh vi\u00ean kh\u00e1c nhau n\u00ean size kh\u00e1c nhau.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 9,
+    "w": 18,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "last_over_time(bench_tag_size_bytes{variant=~\".+\"}[6h])",
+     "legendFormat": "{{variant}} \u00b7 tag {{tag}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 107,
+   "type": "timeseries",
+   "title": "Size segment (byte): l\u1ea7n g\u1ea7n nh\u1ea5t / l\u1edbn nh\u1ea5t",
+   "description": "K\u00edch th\u01b0\u1edbc l\u1edbn nh\u1ea5t c\u1ee7a m\u1ed9t segment cho t\u1eebng pipeline.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 17,
+    "w": 24,
+    "h": 6
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "last_over_time(bench_size_bytes_max{kind=\"segment\",variant=~\".+\"}[6h])",
+     "legendFormat": "max \u00b7 {{variant}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 108,
+   "type": "row",
+   "title": "1. T\u00ednh tag bitmap (ETL: gold \u2192 bitmap theo tag)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 23,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 109,
+   "type": "timeseries",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
+   "description": "A1 = SR gom/ship d\u1eef li\u1ec7u v\u1ec1 service (agg: m\u1ed9t blob bitmap; rows: t\u1eebng actor_id r\u1ed3i service build), A2 = serialize, A3 = ghi blob Mongo; 'A tag total' = A1+A2+A3.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 24,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_last{phase=\"tag\",variant=\"mongo-agg\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 110,
+   "type": "timeseries",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
+   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 24,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_sum{phase=\"tag\",variant=\"mongo-agg\"}/bench_latency_ms_count{phase=\"tag\",variant=\"mongo-agg\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 111,
+   "type": "timeseries",
+   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
+   "description": "A1 = SR gom/ship d\u1eef li\u1ec7u v\u1ec1 service (agg: m\u1ed9t blob bitmap; rows: t\u1eebng actor_id r\u1ed3i service build), A2 = serialize, A3 = ghi blob Mongo; 'A tag total' = A1+A2+A3.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 32,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_last{phase=\"tag\",variant=\"mongo-rows\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 112,
+   "type": "timeseries",
+   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
+   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 32,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_sum{phase=\"tag\",variant=\"mongo-rows\"}/bench_latency_ms_count{phase=\"tag\",variant=\"mongo-rows\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 113,
+   "type": "timeseries",
+   "title": "B: StarRocks native \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
+   "description": "B1 = INSERT ... SELECT bitmap_agg ch\u1ea1y ho\u00e0n to\u00e0n trong SR; 'B tag total' = B1.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 40,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_last{phase=\"tag\",variant=\"sr\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 114,
+   "type": "timeseries",
+   "title": "B: StarRocks native \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
+   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 40,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_sum{phase=\"tag\",variant=\"sr\"}/bench_latency_ms_count{phase=\"tag\",variant=\"sr\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 115,
+   "type": "row",
+   "title": "2. T\u00ednh segment (AND/OR/NOT tr\u00ean 10 tag)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 48,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 116,
+   "type": "timeseries",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
+   "description": "A4 = t\u1ea3i 10 tag t\u1eeb Mongo, A5 = t\u00ednh trong service, A6 = serialize, A7 = ghi segment Mongo; 'A total' l\u00e0 t\u1ed5ng b\u1ed1n b\u01b0\u1edbc.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 49,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_last{phase=\"segment\",variant=\"mongo-agg\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 117,
+   "type": "timeseries",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
+   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 49,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_sum{phase=\"segment\",variant=\"mongo-agg\"}/bench_latency_ms_count{phase=\"segment\",variant=\"mongo-agg\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 118,
+   "type": "timeseries",
+   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
+   "description": "A4 = t\u1ea3i 10 tag t\u1eeb Mongo, A5 = t\u00ednh trong service, A6 = serialize, A7 = ghi segment Mongo; 'A total' l\u00e0 t\u1ed5ng b\u1ed1n b\u01b0\u1edbc.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 57,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_last{phase=\"segment\",variant=\"mongo-rows\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 119,
+   "type": "timeseries",
+   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
+   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 57,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_sum{phase=\"segment\",variant=\"mongo-rows\"}/bench_latency_ms_count{phase=\"segment\",variant=\"mongo-rows\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 120,
+   "type": "timeseries",
+   "title": "B: StarRocks native \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
+   "description": "B total = m\u1ed9t c\u00e2u SQL t\u00ednh v\u00e0 l\u01b0u segment trong SR.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 65,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_last{phase=\"segment\",variant=\"sr\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 121,
+   "type": "timeseries",
+   "title": "B: StarRocks native \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
+   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 65,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_sum{phase=\"segment\",variant=\"sr\"}/bench_latency_ms_count{phase=\"segment\",variant=\"sr\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 122,
+   "type": "row",
+   "title": "3. \u0110\u1ecdc (contains / get users)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 73,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 123,
+   "type": "timeseries",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
+   "description": "\u0110\u1ecdc blob t\u1eeb Mongo r\u1ed3i ki\u1ec3m tra / l\u1ea5y user trong service.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 74,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_last{phase=\"read\",variant=\"mongo-agg\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 124,
+   "type": "timeseries",
+   "title": "A-agg: Mongo, SR gom bitmap (export agg) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
+   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 74,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_sum{phase=\"read\",variant=\"mongo-agg\"}/bench_latency_ms_count{phase=\"read\",variant=\"mongo-agg\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 125,
+   "type": "timeseries",
+   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
+   "description": "\u0110\u1ecdc blob t\u1eeb Mongo r\u1ed3i ki\u1ec3m tra / l\u1ea5y user trong service.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 82,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_last{phase=\"read\",variant=\"mongo-rows\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 126,
+   "type": "timeseries",
+   "title": "A-rows: Mongo, service t\u1ef1 build t\u1eeb rows (export rows) \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
+   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 82,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_sum{phase=\"read\",variant=\"mongo-rows\"}/bench_latency_ms_count{phase=\"read\",variant=\"mongo-rows\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 127,
+   "type": "timeseries",
+   "title": "B: StarRocks native \u00b7 l\u1ea7n g\u1ea7n nh\u1ea5t (ms)",
+   "description": "bitmap_contains / unnest ngay trong SR.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 90,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_last{phase=\"read\",variant=\"sr\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 128,
+   "type": "timeseries",
+   "title": "B: StarRocks native \u00b7 trung b\u00ecnh t\u00edch lu\u1ef9 (ms)",
+   "description": "Trung b\u00ecnh t\u1eeb \u0111\u1ea7u l\u1ea7n ch\u1ea1y (sum/count), m\u01b0\u1ee3t h\u01a1n s\u1ed1 l\u1ea7n g\u1ea7n nh\u1ea5t.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 90,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "bench_latency_ms_sum{phase=\"read\",variant=\"sr\"}/bench_latency_ms_count{phase=\"read\",variant=\"sr\"}",
+     "legendFormat": "{{step}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 129,
+   "type": "row",
+   "title": "4. T\u00e0i nguy\u00ean server (StarRocks, MongoDB)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 98,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 1,
+   "type": "timeseries",
+   "title": "SR query rate (qps)",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 99,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(starrocks_fe_query_total[1m])",
+     "legendFormat": "qps",
+     "refId": "A"
+    }
+   ],
+   "description": "S\u1ed1 query/gi\u00e2y FE StarRocks nh\u1eadn. Ph\u1ea3n \u00e1nh t\u1ea3i c\u1ee7a pipeline B (SQL compute segment, contains, get users) v\u00e0 c\u00e1c c\u00e2u load/ETL. T\u0103ng v\u1ecdt khi b\u01b0\u1edbc segment/read ch\u1ea1y."
+  },
+  {
+   "id": 2,
+   "type": "timeseries",
+   "title": "SR query latency avg (ms)",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 99,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(starrocks_fe_query_latency_ms_sum[1m])/rate(starrocks_fe_query_latency_ms_count[1m])",
+     "legendFormat": "avg",
+     "refId": "A"
+    },
+    {
+     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.99\"}",
+     "legendFormat": "p99",
+     "refId": "B"
+    }
+   ],
+   "description": "\u0110\u1ed9 tr\u1ec5 query \u1edf FE StarRocks: trung b\u00ecnh (sum/count) v\u00e0 p99. So v\u1edbi A total/B total trong b\u00e1o c\u00e1o benchmark \u0111\u1ec3 th\u1ea5y c\u00e2u n\u00e0o ch\u1eadm; p99 cao h\u01a1n nhi\u1ec1u so v\u1edbi avg ngh\u0129a l\u00e0 c\u00f3 query n\u1eb7ng (th\u01b0\u1eddng l\u00e0 load gold ho\u1eb7c B1)."
+  },
+  {
+   "id": 3,
+   "type": "timeseries",
+   "title": "SR BE process memory",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 107,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "starrocks_be_process_mem_bytes",
+     "legendFormat": "process",
+     "refId": "A"
+    }
+   ],
+   "description": "RAM ti\u1ebfn tr\u00ecnh BE StarRocks. T\u0103ng m\u1ea1nh \u1edf b\u01b0\u1edbc load gold v\u00e0 B1 (bitmap_agg). G\u1ea7n gi\u1edbi h\u1ea1n RAM Docker th\u00ec query c\u00f3 th\u1ec3 b\u1ecb kill."
+  },
+  {
+   "id": 4,
+   "type": "timeseries",
+   "title": "SR BE CPU",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 107,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(starrocks_be_cpu[1m])",
+     "legendFormat": "{{mode}}",
+     "refId": "A"
+    }
+   ],
+   "description": "CPU c\u1ee7a BE theo t\u1eebng mode (user/system/idle/iowait...). Mode user cao = \u0111ang t\u00ednh to\u00e1n (sinh gold, bitmap_agg, AND/OR/NOT bitmap); iowait cao = ngh\u1ebdn \u0111\u0129a."
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "Mongo ops/s",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 115,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(mongodb_ss_opcounters[1m])",
+     "legendFormat": "{{legacy_op_type}}",
+     "refId": "A"
+    }
+   ],
+   "description": "S\u1ed1 thao t\u00e1c/gi\u00e2y tr\u00ean MongoDB theo lo\u1ea1i (insert/query/update/getmore...). Ph\u1ea3n \u00e1nh pipeline A: ghi blob tag/segment (insert) v\u00e0 \u0111\u1ecdc blob (query/getmore) qua GridFS."
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "Mongo network bytes/s",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 115,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(mongodb_ss_network_bytesIn[1m])",
+     "legendFormat": "in",
+     "refId": "A"
+    },
+    {
+     "expr": "rate(mongodb_ss_network_bytesOut[1m])",
+     "legendFormat": "out",
+     "refId": "B"
+    }
+   ],
+   "description": "L\u01b0u l\u01b0\u1ee3ng m\u1ea1ng v\u00e0o/ra MongoDB (byte/gi\u00e2y). In = ghi bitmap tag/segment, out = service t\u1ea3i blob tag \u0111\u1ec3 t\u00ednh segment. \u0110\u00e2y l\u00e0 chi ph\u00ed di chuy\u1ec3n d\u1eef li\u1ec7u m\u00e0 pipeline B kh\u00f4ng c\u00f3."
+  },
+  {
+   "id": 7,
+   "type": "timeseries",
+   "title": "Mongo resident memory (MB)",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 123,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "decmbytes"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "mongodb_ss_mem_resident",
+     "legendFormat": "resident",
+     "refId": "A"
+    }
+   ],
+   "description": "RAM resident c\u1ee7a mongod (MB). Mongo cache blob GridFS n\u00ean t\u0103ng d\u1ea7n theo dung l\u01b0\u1ee3ng d\u1eef li\u1ec7u; so v\u1edbi RAM c\u1ee7a SR BE \u0111\u1ec3 th\u1ea5y chi ph\u00ed b\u1ed9 nh\u1edb c\u1ee7a hai h\u01b0\u1edbng."
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "Mongo data size",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 123,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "mongodb_dbstats_dataSize{database=\"bm_bench\"}",
+     "legendFormat": "dataSize",
+     "refId": "A"
+    }
+   ],
+   "description": "Dung l\u01b0\u1ee3ng d\u1eef li\u1ec7u database bm_bench (byte): t\u1ed5ng blob bitmap tag v\u00e0 segment trong GridFS. So v\u1edbi k\u00edch th\u01b0\u1edbc bitmap trong SR \u0111\u1ec3 so chi ph\u00ed l\u01b0u tr\u1eef."
+  },
+  {
+   "id": 9,
+   "type": "timeseries",
+   "title": "SR query latency percentiles (ms)",
+   "description": "Ph\u00e2n v\u1ecb \u0111\u1ed9 tr\u1ec5 query \u1edf FE StarRocks (p75 \u2192 p99.9). Kho\u1ea3ng c\u00e1ch gi\u1eefa p75 v\u00e0 p99.9 cho th\u1ea5y \u0111\u1ed9 l\u1ec7ch \u0111u\u00f4i: c\u00e2u nh\u1eb9 (contains, unnest) n\u1eb1m \u1edf p75, c\u00e2u n\u1eb7ng (load gold, B1 bitmap_agg) k\u00e9o p99/p99.9 l\u00ean.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 131,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.75\"}",
+     "legendFormat": "p75",
+     "refId": "A"
+    },
+    {
+     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.95\"}",
+     "legendFormat": "p95",
+     "refId": "B"
+    },
+    {
+     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.98\"}",
+     "legendFormat": "p98",
+     "refId": "C"
+    },
+    {
+     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.99\"}",
+     "legendFormat": "p99",
+     "refId": "D"
+    },
+    {
+     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.999\"}",
+     "legendFormat": "p99.9",
+     "refId": "E"
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "type": "timeseries",
+   "title": "Mongo op latency avg (ms)",
+   "description": "\u0110\u1ed9 tr\u1ec5 trung b\u00ecnh m\u1ed7i thao t\u00e1c tr\u00ean MongoDB theo lo\u1ea1i (reads = t\u1ea3i blob tag/segment, writes = ghi blob). L\u00e0 ph\u1ea7n Mongo c\u1ee7a A4/A3/A7; c\u1ed9ng th\u00eam th\u1eddi gian compute \u1edf service \u0111\u1ec3 ra A total.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 131,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"reads\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"reads\"}[1m]),1)/1000",
+     "legendFormat": "reads",
+     "refId": "A"
+    },
+    {
+     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"writes\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"writes\"}[1m]),1)/1000",
+     "legendFormat": "writes",
+     "refId": "B"
+    },
+    {
+     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"commands\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"commands\"}[1m]),1)/1000",
+     "legendFormat": "commands",
+     "refId": "C"
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "type": "timeseries",
+   "title": "SR vs Mongo latency (ms)",
+   "description": "\u0110\u1eb7t c\u1ea1nh nhau \u0111\u1ed9 tr\u1ec5 ph\u00eda SR (pipeline B) v\u00e0 Mongo (pipeline A) \u0111\u1ec3 so tr\u1ef1c quan. L\u01b0u \u00fd \u0111\u00e2y l\u00e0 \u0111\u1ed9 tr\u1ec5 ph\u00eda server, ch\u01b0a g\u1ed3m compute AND/OR/NOT v\u00e0 gi\u1ea3i m\u00e3 bitmap \u1edf service; s\u1ed1 end-to-end A vs B xem b\u00e1o c\u00e1o benchmark.",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 139,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "expr": "starrocks_fe_query_latency_ms{quantile=\"0.95\"}",
+     "legendFormat": "SR p95 query",
+     "refId": "A"
+    },
+    {
+     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"reads\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"reads\"}[1m]),1)/1000",
+     "legendFormat": "Mongo read avg",
+     "refId": "B"
+    },
+    {
+     "expr": "rate(mongodb_ss_opLatencies_latency{op_type=\"writes\"}[1m])/clamp_min(rate(mongodb_ss_opLatencies_ops{op_type=\"writes\"}[1m]),1)/1000",
+     "legendFormat": "Mongo write avg",
+     "refId": "C"
+    }
+   ]
+  }
+ ]
+}

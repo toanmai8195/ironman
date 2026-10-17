@@ -14,7 +14,14 @@
 #   Resume từ savepoint: SAVEPOINT_PATH=s3://flink/savepoints/... docker compose ... up -d flink-jobmanager flink-taskmanager
 #   (xem com/tm/flink/SETUP.md)
 #
-# Port host chọn khác vision/thor để chạy song song được: pg 5434 · kafka 39092 · connect 8084 · flink ui 18081 · iceberg rest 18181 · starrocks mysql 19030 · minio 19000/19001
+# Thử nghiệm 3 — star-rock-bitmap (profile `bitmap`, độc lập, không cần stack Debezium/Flink): StarRocks + MongoDB cho benchmark bitmap
+#   docker compose -f com/tm/docker/ironman/docker-compose.yml --profile bitmap up -d --no-deps \
+#     starrocks-bitmap mongo-bitmap mongo-exporter-bitmap prometheus-bitmap grafana-bitmap   # --no-deps: postgres/kafka/... không có profile nên sẽ bị kéo theo
+#   Grafana http://localhost:23000 (dashboard bitmap-bench) · Prometheus http://localhost:29090
+#   bazel run //com/tm/star-rock-bitmap:bench -- all --tags 3 --universe 1000000 \
+#     --sr 'jdbc:mysql://127.0.0.1:29030/?sessionVariables=query_timeout=7200' --mongo mongodb://127.0.0.1:37017
+#
+# Port host chọn khác vision/thor để chạy song song được: pg 5434 · kafka 39092 · connect 8084 · flink ui 18081 · iceberg rest 18181 · starrocks mysql 19030 · minio 19000/19001 · bitmap: starrocks mysql 29030 / http 28030 · mongo 37017 · prometheus 29090 · grafana 23000
 name: ironman
 
 services:
@@ -287,7 +294,74 @@ services:
         s3.access-key: ironman
         s3.secret-key: ironman-secret
 
+  # ===== Thử nghiệm 3: star-rock-bitmap (profile bitmap) =====
+
+  # StarRocks riêng cho benchmark bitmap (tách khỏi `starrocks` của Flink để không kéo theo Iceberg/MinIO).
+  starrocks-bitmap:
+    image: starrocks/allin1-ubuntu:3.5.8
+    container_name: ironman-starrocks-bitmap
+    profiles: ["bitmap"]
+    ports: ["29030:9030", "28030:8030"]
+    volumes:
+      - starrocks-bitmap-data:/data/deploy/starrocks/be/storage
+    healthcheck:
+      test: ["CMD-SHELL", "mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+
+  # MongoDB: bitmap tag/segment lưu GridFS (database bm_bench).
+  mongo-bitmap:
+    image: mongo:7.0
+    container_name: ironman-mongo-bitmap
+    profiles: ["bitmap"]
+    ports: ["37017:27017"]
+    volumes:
+      - mongo-bitmap-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ping:1}).ok' | grep -q 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Exporter cho MongoDB (metrics :9216).
+  mongo-exporter-bitmap:
+    image: percona/mongodb_exporter:0.40
+    container_name: ironman-mongo-exporter-bitmap
+    profiles: ["bitmap"]
+    command: ["--mongodb.uri=mongodb://mongo-bitmap:27017", "--collect-all"]
+    depends_on:
+      mongo-bitmap: { condition: service_healthy }
+
+  # Scrape FE/BE của StarRocks + mongo exporter. UI: http://localhost:29090
+  prometheus-bitmap:
+    image: prom/prometheus:v2.55.1
+    container_name: ironman-prometheus-bitmap
+    profiles: ["bitmap"]
+    ports: ["29090:9090"]
+    volumes:
+      - ./bitmap/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-bitmap-data:/prometheus
+
+  # Grafana: http://localhost:23000 (admin / admin), datasource Prometheus đã provision sẵn.
+  grafana-bitmap:
+    image: grafana/grafana:11.3.0
+    container_name: ironman-grafana-bitmap
+    profiles: ["bitmap"]
+    depends_on: [prometheus-bitmap]
+    ports: ["23000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./bitmap/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-bitmap-data:/var/lib/grafana
+
 volumes:
+  prometheus-bitmap-data:
+  grafana-bitmap-data:
+  starrocks-bitmap-data:
+  mongo-bitmap-data:
   postgres-data:
   minio-data:
   iceberg-catalog:

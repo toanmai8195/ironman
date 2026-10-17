@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  # StarRocks allin1: FE :8030, BE :8040 (cùng container)
+  - job_name: starrocks-fe
+    metrics_path: /metrics
+    static_configs: [{ targets: ["starrocks-bitmap:8030"], labels: { role: fe } }]
+  - job_name: starrocks-be
+    metrics_path: /metrics
+    static_configs: [{ targets: ["starrocks-bitmap:8040"], labels: { role: be } }]
+  - job_name: mongo
+    static_configs: [{ targets: ["mongo-exporter-bitmap:9216"] }]
+  - job_name: prometheus
+    static_configs: [{ targets: ["localhost:9090"] }]
+  # Latency từng bước do chính benchmark xuất (Stats.serve, port 9464 trên host)
+  - job_name: bench
+    scrape_interval: 2s
+    static_configs: [{ targets: ["host.docker.internal:9464"] }]
