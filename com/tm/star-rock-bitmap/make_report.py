@@ -37,6 +37,12 @@ TESTS = [
          unit="lần get",
          cases=[("t4-mongo", "A get all users: mongo get chunks + iterate", "segment Mongo → service", "get chunk, giải mã, duyệt hết user"),
                 ("t4-sr", "B get all users: SQL unnest", "segment StarRocks → service", "SELECT unnest(bitmap_to_array(bm)), trả từng hàng")]),
+    dict(id="t5", file="test5-segment-hybrid.md", title="Test 5: segment chỉ Mongo so với kiến trúc lai (StarRocks tính segment, xuất sang Mongo)",
+         desc="Đo từ lúc bắt đầu lấy dữ liệu (Mongo: get 10 tag; lai: bắt đầu query StarRocks) đến lúc segment đã lưu xong trong Mongo, sẵn sàng cho consumer lấy toàn bộ user.",
+         unit="segment",
+         cases=[("t5-mongo", "A total (fetch+compute+store)", "tag Mongo → segment Mongo (chỉ Mongo)", "tải 10 tag, and/or/not ở service, ghi chunk Mongo"),
+                ("t5-hybrid", "B hybrid total: SR compute + export to mongo", "tag StarRocks → segment StarRocks → Mongo (lai)",
+                 "SR tính và lưu segment, rồi bitmap_to_base64, giải mã, ghi chunk Mongo")]),
 ]
 
 
@@ -65,6 +71,12 @@ def check_lines(t, data):
             a = data[m]["t4-mongo"]["notes"]["users_read_a"]
             b = data[m]["t4-sr"]["notes"]["users_read_b"]
             out.append(f"- {m}: tổng số user đọc được: Mongo {a:,}, StarRocks {b:,}, " + ("khớp nhau." if a == b else "LỆCH NHAU."))
+    elif t["id"] == "t5":
+        for m, _ in MODES:
+            a = data[m]["t5-mongo"]["notes"]["segment_users_a"]
+            b = data[m]["t5-hybrid"]["notes"]["segment_users_b"]
+            e = data[m]["t5-hybrid"]["notes"]["segment_exported_users"]
+            out.append(f"- {m}: tổng user của segment: chỉ Mongo {a:,}, StarRocks {b:,}, bản xuất sang Mongo {e:,}, " + ("khớp nhau." if a == b == e else "LỆCH NHAU."))
     else:
         out.append("- Số user trong từng tag được in trong log lúc chạy (`report/<chế độ>/logs/`); gold giống nhau giữa các case.")
     return out

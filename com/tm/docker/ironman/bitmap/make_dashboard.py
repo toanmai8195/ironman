@@ -27,6 +27,10 @@ TESTS = [
     ("t4", "Test 4: lấy toàn bộ user của segment từ Mongo so với từ StarRocks",
      "Latency từ khi bắt đầu get đến khi service có toàn bộ user của segment. Mongo: get chunk, giải mã, duyệt hết. SR: SELECT unnest(bitmap_to_array(bm)) trả từng hàng.",
      "(A get all.*|B get all.*)", "get"),
+    ("t5", "Test 5: segment chỉ Mongo so với kiến trúc lai (StarRocks tính segment rồi xuất sang Mongo)",
+     "Latency từ khi bắt đầu lấy dữ liệu (Mongo: get 10 tag; lai: bắt đầu query StarRocks) đến khi segment đã lưu xong trong Mongo. "
+     "t5-mongo: tải 10 tag, and/or/not ở service, ghi chunk. t5-hybrid: SR tính và lưu segment, rồi bitmap_to_base64, giải mã, ghi chunk Mongo.",
+     "(A total.*|B hybrid total.*)", "segment"),
 ]
 
 

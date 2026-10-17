@@ -120,6 +120,25 @@ final class Bench {
         }
         st.size("segment", "B", seg, Sr.bitmapBytes(c, "SELECT bm FROM bm_bench.segment_bitmap WHERE segment_id = " + seg));
         st.note("segment_users_b", cardB);
+        if (cfg.exportToMongo()) {
+          // ---- Test 5 (kiến trúc lai): sao chép segment từ SR sang Mongo để phục vụ lấy toàn bộ user
+          String b64 = st.time("B2 export: SR bitmap_to_base64", () -> {
+            try (PreparedStatement ps = c.prepareStatement("SELECT bitmap_to_base64(bm) FROM bm_bench.segment_bitmap WHERE segment_id = ?")) {
+              ps.setInt(1, seg);
+              try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getString(1);
+              }
+            }
+          });
+          RoaringBitmap exported = st.time("B3 export: decode SR bitmap", () -> BitmapCodec.decodeStarRocks(b64));
+          byte[] eb = st.time("B4 export: serialize", () -> BitmapCodec.serialize(exported));
+          st.time("B5 export: mongo put chunks (<=8MB, <=10 parallel)", () -> mg.put(MongoStore.segmentKey(seg), eb));
+          st.add("B hybrid total: SR compute + export to mongo",
+              st.last("B total: SQL compute + store") + st.last("B2 export: SR bitmap_to_base64") + st.last("B3 export: decode SR bitmap")
+                  + st.last("B4 export: serialize") + st.last("B5 export: mongo put chunks (<=8MB, <=10 parallel)"));
+          st.note("segment_exported_users", exported.getLongCardinality());
+        }
       }
       System.out.printf("segment %d card A=%d B=%d blob=%.2fMB  %s%n", seg, cardA, cardB, bytes / 1e6, expr);
     }

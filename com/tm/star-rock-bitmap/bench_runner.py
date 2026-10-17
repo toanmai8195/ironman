@@ -5,13 +5,15 @@
   Test 2: tag gold -> agg -> bitmap Mongo   so với  gold -> bitmap trong StarRocks   (tới khi bitmap sẵn sàng)
   Test 3: segment từ tag trong Mongo        so với  segment từ tag trong StarRocks   (tới khi lưu xong segment)
   Test 4: lấy toàn bộ user của segment từ Mongo so với từ StarRocks                  (tới khi service có đủ user)
+  Test 5: segment chỉ Mongo (tag Mongo -> segment Mongo) so với kiến trúc lai (SR tính segment rồi xuất sang Mongo)
 
 Cùng gold cho mọi test (50 tag, mỗi tag 5 đến 10 triệu user). Bitmap trong Mongo lưu thành chunk tối đa 8MB,
 tối đa 10 chunk đọc hoặc ghi đồng thời.
 
 Thứ tự trong một chế độ (tiết kiệm chi phí, vẫn mỗi test chạy đủ các case):
   1. reset data, load gold, test 1 (t1-rows, t1-agg), xoá data
-  2. reset data, load gold, test 2 (t2-agg, t2-sr), rồi test 3 (t3-mongo, t3-sr) và test 4 (t4-mongo, t4-sr) trên cùng data
+  2. reset data, load gold, test 2 (t2-agg, t2-sr), rồi test 3 (t3-mongo, t3-sr) và test 4 (t4-mongo, t4-sr) trên cùng data, xoá data
+  3. reset data, load gold, dựng tag trong Mongo và StarRocks (không tính vào test), test 5 (t5-mongo, t5-hybrid)
 
 Dùng (từ thư mục gốc repo):
   python3 com/tm/star-rock-bitmap/bench_runner.py --mode limited      # giới hạn docker hiện tại
@@ -150,14 +152,14 @@ def common_args(a):
             "--chunk-bytes", "8000000", "--seed", "42", "--sr", SR_URL, "--mongo", MONGO_URL]
 
 
-def run_case(a, outdir, env, test, case, cmd, pipeline, export="agg"):
+def run_case(a, outdir, env, test, case, cmd, pipeline, export="agg", extra=None):
     """Chạy 1 case trong container service, lấy mẫu tài nguyên, ghi <case>.json (kết quả bench + resources)."""
     jpath = outdir / f"{case}.json"
     logpath = outdir / "logs" / f"{case}.log"
     logpath.parent.mkdir(parents=True, exist_ok=True)
     out_name = a.outname or a.mode
     args = [cmd] + common_args(a) + ["--pipeline", pipeline, "--export", export, "--test", test, "--limits", a.mode,
-                                     "--case", case, "--out", f"/out/{out_name}/{case}.json"]
+                                     "--case", case, "--out", f"/out/{out_name}/{case}.json"] + (extra or [])
     print(f"== {case}: {cmd} --pipeline {pipeline} --export {export}", flush=True)
     sh(["docker", "rm", "-f", CONTAINERS["service"]], check=False, capture=True)
     base = baseline_counters()
@@ -209,7 +211,7 @@ def load_gold(a, outdir, env):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["limited", "unlimited"], required=True)
-    ap.add_argument("--tests", default="t1,t234", help="t1 và/hoặc t234 (test 2, 3, 4 chạy liền trên cùng data)")
+    ap.add_argument("--tests", default="t1,t234,t5", help="t1, t234 (test 2, 3, 4 chạy liền trên cùng data), t5")
     ap.add_argument("--segments", type=int, default=300)
     ap.add_argument("--full-gets", type=int, default=40)
     ap.add_argument("--universe", type=int, default=50000000)
@@ -232,6 +234,12 @@ def main():
             run_case(a, outdir, env, "t3", "t3-sr", "segment", "b")
             run_case(a, outdir, env, "t4", "t4-mongo", "getall", "a")
             run_case(a, outdir, env, "t4", "t4-sr", "getall", "b")
+        elif g == "t5":
+            # chuẩn bị (không tính vào test): tag trong Mongo (agg) và trong StarRocks
+            run_case(a, outdir, env, "setup", "setup-tag-mongo", "etl", "a", "agg")
+            run_case(a, outdir, env, "setup", "setup-tag-sr", "etl", "b")
+            run_case(a, outdir, env, "t5", "t5-mongo", "segment", "a")
+            run_case(a, outdir, env, "t5", "t5-hybrid", "segment", "b", extra=["--export-to-mongo", "true"])
         else:
             raise SystemExit(f"nhóm không hợp lệ: {g}")
         log(f"xong {g}")

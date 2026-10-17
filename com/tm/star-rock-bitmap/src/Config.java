@@ -30,7 +30,8 @@ record Config(
     int chunkBytes,
     String test,
     String limits,
-    String caseName) {
+    String caseName,
+    boolean exportToMongo) {
 
   /** Chạy pipeline A (Mongo + service). */
   boolean runA() {
@@ -108,6 +109,7 @@ record Config(
         Integer.parseInt(m.getOrDefault("chunk-bytes", "8000000")),
         m.getOrDefault("test", ""),
         m.getOrDefault("limits", ""),
-        m.getOrDefault("case", ""));
+        m.getOrDefault("case", ""),
+        Boolean.parseBoolean(m.getOrDefault("export-to-mongo", "false")));
   }
 }
