@@ -34,6 +34,9 @@ public final class Main {
         case "etl" -> Bench.etl(c, mg, cfg, st);
         case "segment" -> Bench.segment(c, mg, cfg, st);
         case "getall" -> Bench.getAll(c, mg, cfg, st);
+        case "e2e" -> Bench.e2e(c, mg, cfg, st);
+        case "loadseg" -> Bench.loadSegments(c, mg, cfg, st);
+        case "ops" -> Bench.ops(c, mg, cfg, st);
         case "run" -> { // như all nhưng không load lại gold
           Bench.etl(c, mg, cfg, st);
           Bench.segment(c, mg, cfg, st);

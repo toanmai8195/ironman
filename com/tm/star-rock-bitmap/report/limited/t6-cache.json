@@ -1,0 +1,96 @@
+{
+ "meta": {
+  "cmd": "e2e",
+  "pipeline": "c",
+  "export": "agg",
+  "tags": 50,
+  "segments": 100,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "C0 load one tag (SR bitmap_to_base64 + decode)": {
+   "n": 250,
+   "avg_ms": 32.585,
+   "min_ms": 28.573,
+   "p50_ms": 31.03,
+   "p90_ms": 36.738,
+   "p99_ms": 51.085,
+   "max_ms": 87.734,
+   "sum_ms": 8146.203
+  },
+  "C1 cold load all tags (SR -> service cache)": {
+   "n": 5,
+   "avg_ms": 1630.486,
+   "min_ms": 1569.038,
+   "p50_ms": 1584.979,
+   "p90_ms": 1803.54,
+   "p99_ms": 1803.54,
+   "max_ms": 1803.54,
+   "sum_ms": 8152.43
+  },
+  "C2 compute and/or/not (cache)": {
+   "n": 100,
+   "avg_ms": 30.964,
+   "min_ms": 17.74,
+   "p50_ms": 29.61,
+   "p90_ms": 44.029,
+   "p99_ms": 53.795,
+   "max_ms": 56.836,
+   "sum_ms": 3096.382
+  },
+  "C3 get all users (iterate, in memory)": {
+   "n": 100,
+   "avg_ms": 25.437,
+   "min_ms": 19.062,
+   "p50_ms": 25.318,
+   "p90_ms": 30.006,
+   "p99_ms": 31.755,
+   "max_ms": 32.028,
+   "sum_ms": 2543.702
+  },
+  "C segment total: compute + all users (cache)": {
+   "n": 100,
+   "avg_ms": 56.401,
+   "min_ms": 43.005,
+   "p50_ms": 54.326,
+   "p90_ms": 69.43,
+   "p99_ms": 76.756,
+   "max_ms": 82.259,
+   "sum_ms": 5640.084
+  }
+ },
+ "notes": {
+  "segment_users_c": 748103101
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 0.7356,
+   "cpu_max": 1.0277,
+   "mem_max_gb": 3.762,
+   "net_rx_gb": 0.001360000000000001,
+   "net_tx_gb": 2.12,
+   "samples": 8
+  },
+  "mongo": {
+   "cpu_avg": 0.042875,
+   "cpu_max": 0.264,
+   "mem_max_gb": 0.212109375,
+   "net_rx_gb": 2.8e-05,
+   "net_tx_gb": 0.0006,
+   "samples": 8
+  },
+  "service": {
+   "cpu_avg": 0.8567,
+   "cpu_max": 1.1671,
+   "mem_max_gb": 0.841015625,
+   "net_rx_gb": 2.09,
+   "net_tx_gb": 0.00138,
+   "samples": 7
+  }
+ },
+ "wall_seconds": 15.0,
+ "case": "t6-cache",
+ "test": "t6",
+ "limits": "limited"
+}

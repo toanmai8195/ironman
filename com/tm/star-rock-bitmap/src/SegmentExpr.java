@@ -110,6 +110,20 @@ final class SegmentExpr {
     return a;
   }
 
+  /** Tính trong memory mà không sửa bitmap của lá (dùng với cache bitmap tag dùng chung giữa các segment). */
+  RoaringBitmap evalPure(Map<Integer, RoaringBitmap> leaf) {
+    if (op == TAG) {
+      return leaf.get(tag);
+    }
+    RoaringBitmap a = l.evalPure(leaf);
+    RoaringBitmap b = r.evalPure(leaf);
+    return switch (op) {
+      case AND -> RoaringBitmap.and(a, b);
+      case OR -> RoaringBitmap.or(a, b);
+      default -> RoaringBitmap.andNot(a, b);
+    };
+  }
+
   private String sql() {
     return switch (op) {
       case TAG -> "t" + tag + ".bm";

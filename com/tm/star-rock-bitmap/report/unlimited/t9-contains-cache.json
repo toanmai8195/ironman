@@ -1,0 +1,68 @@
+{
+ "meta": {
+  "cmd": "ops",
+  "pipeline": "c",
+  "export": "agg",
+  "tags": 50,
+  "segments": 100,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "C0 load segment (SR bitmap_to_base64 + decode)": {
+   "n": 100,
+   "avg_ms": 38.20407,
+   "min_ms": 27.02588,
+   "p50_ms": 33.72304,
+   "p90_ms": 51.25033,
+   "p99_ms": 83.47075,
+   "max_ms": 88.22463,
+   "sum_ms": 3820.407
+  },
+  "C contains (cache hit)": {
+   "n": 2000,
+   "avg_ms": 0.0012,
+   "min_ms": 0.00025,
+   "p50_ms": 0.00092,
+   "p90_ms": 0.00133,
+   "p99_ms": 0.00267,
+   "max_ms": 0.43321,
+   "sum_ms": 2.407
+  }
+ },
+ "notes": {
+  "contains_true": 312,
+  "wall_ms": 11,
+  "loads": 2000
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 0.8998,
+   "cpu_max": 1.6230000000000002,
+   "mem_max_gb": 5.909,
+   "net_rx_gb": 0.000499,
+   "net_tx_gb": 0.83485,
+   "samples": 3
+  },
+  "mongo": {
+   "cpu_avg": 0.0065,
+   "cpu_max": 0.0075,
+   "mem_max_gb": 0.08283203125,
+   "net_rx_gb": 2e-05,
+   "net_tx_gb": 0.00035,
+   "samples": 3
+  },
+  "service": {
+   "cpu_avg": 1.0187,
+   "cpu_max": 1.1586,
+   "mem_max_gb": 0.9642578125,
+   "net_rx_gb": 0.618,
+   "net_tx_gb": 0.000374,
+   "samples": 2
+  }
+ },
+ "wall_seconds": 5.1,
+ "case": "t9-contains-cache",
+ "test": "t9",
+ "limits": "unlimited"
+}

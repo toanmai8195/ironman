@@ -1,0 +1,58 @@
+{
+ "meta": {
+  "cmd": "loadseg",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B load segment: SR bitmap_to_base64 + decode": {
+   "n": 2000,
+   "avg_ms": 33.00641,
+   "min_ms": 26.73775,
+   "p50_ms": 32.27729,
+   "p90_ms": 37.91092,
+   "p99_ms": 47.21121,
+   "max_ms": 86.18529,
+   "sum_ms": 66012.811
+  }
+ },
+ "notes": {
+  "users_loaded_b": 14812644024,
+  "wall_ms": 66087,
+  "loads": 2000
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 0.6569088235294118,
+   "cpu_max": 0.8166,
+   "mem_max_gb": 3.603,
+   "net_rx_gb": 0.01203,
+   "net_tx_gb": 16.68,
+   "samples": 34
+  },
+  "mongo": {
+   "cpu_avg": 0.06308235294117648,
+   "cpu_max": 0.34,
+   "mem_max_gb": 2.085,
+   "net_rx_gb": 0.0,
+   "net_tx_gb": 0.1,
+   "samples": 34
+  },
+  "service": {
+   "cpu_avg": 0.5106636363636364,
+   "cpu_max": 0.6820999999999999,
+   "mem_max_gb": 0.37314453125,
+   "net_rx_gb": 16.5,
+   "net_tx_gb": 0.0119,
+   "samples": 33
+  }
+ },
+ "wall_seconds": 66.9,
+ "case": "t7-sr",
+ "test": "t7",
+ "limits": "limited"
+}

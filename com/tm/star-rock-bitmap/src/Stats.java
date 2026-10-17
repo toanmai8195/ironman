@@ -55,7 +55,7 @@ final class Stats {
   }
 
   private String variant(String pipeline) {
-    return pipeline.equals("A") ? "mongo-" + mode : pipeline.equals("B") ? "sr" : "";
+    return pipeline.equals("A") ? "mongo-" + mode : pipeline.equals("B") ? "sr" : pipeline.equals("C") ? "sr-cache" : "";
   }
 
   /** Giai đoạn của metric: tag (tính tag bitmap), segment (tính segment), read, hoặc load. */
@@ -85,7 +85,7 @@ final class Stats {
     sb.append(String.format("bench_phase_active{test=\"%s\",limits=\"%s\",case=\"%s\"} 1%n", test, limits, caseName));
     for (var e : agg.entrySet()) {
       String n = e.getKey();
-      String pl = n.startsWith("B") ? "B" : n.startsWith("A") ? "A" : "sr";
+      String pl = n.startsWith("B") ? "B" : n.startsWith("A") ? "A" : n.startsWith("C") ? "C" : "sr";
       String l = String.format("{step=\"%s\",phase=\"%s\",pipeline=\"%s\",mode=\"%s\",variant=\"%s\",test=\"%s\",limits=\"%s\",case=\"%s\"}", n.replace("\"", ""),
           phase(n), pl, mode, variant(pl), test, limits, caseName);
       long[] a = e.getValue();
@@ -158,7 +158,7 @@ final class Stats {
       sb.append(first ? "\n" : ",\n");
       first = false;
       sb.append(String.format(java.util.Locale.ROOT,
-          "    \"%s\": {\"n\": %d, \"avg_ms\": %.3f, \"min_ms\": %.3f, \"p50_ms\": %.3f, \"p90_ms\": %.3f, \"p99_ms\": %.3f, \"max_ms\": %.3f, \"sum_ms\": %.3f}",
+          "    \"%s\": {\"n\": %d, \"avg_ms\": %.5f, \"min_ms\": %.5f, \"p50_ms\": %.5f, \"p90_ms\": %.5f, \"p99_ms\": %.5f, \"max_ms\": %.5f, \"sum_ms\": %.3f}",
           e.getKey().replace("\"", ""), n, sum / 1e6 / n, v.get(0) / 1e6, pct(v, 0.5) / 1e6, pct(v, 0.9) / 1e6,
           pct(v, 0.99) / 1e6, v.get(n - 1) / 1e6, sum / 1e6));
     }

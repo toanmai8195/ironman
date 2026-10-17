@@ -1,0 +1,58 @@
+{
+ "meta": {
+  "cmd": "loadseg",
+  "pipeline": "a",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A load segment: mongo get chunks + deserialize": {
+   "n": 2000,
+   "avg_ms": 10.66816,
+   "min_ms": 9.40267,
+   "p50_ms": 10.19367,
+   "p90_ms": 12.11888,
+   "p99_ms": 16.75033,
+   "max_ms": 41.10508,
+   "sum_ms": 21336.318
+  }
+ },
+ "notes": {
+  "users_loaded_a": 14812644024,
+  "wall_ms": 21378,
+  "loads": 2000
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 0.4646818181818182,
+   "cpu_max": 1.0042,
+   "mem_max_gb": 6.339,
+   "net_rx_gb": 1e-05,
+   "net_tx_gb": 0.01,
+   "samples": 11
+  },
+  "mongo": {
+   "cpu_avg": 0.17584545454545453,
+   "cpu_max": 0.4311,
+   "mem_max_gb": 2.056,
+   "net_rx_gb": 0.01,
+   "net_tx_gb": 12.4916,
+   "samples": 11
+  },
+  "service": {
+   "cpu_avg": 1.0316800000000002,
+   "cpu_max": 1.1591,
+   "mem_max_gb": 0.89267578125,
+   "net_rx_gb": 11.3,
+   "net_tx_gb": 0.00839,
+   "samples": 10
+  }
+ },
+ "wall_seconds": 23.1,
+ "case": "t7-mongo",
+ "test": "t7",
+ "limits": "unlimited"
+}

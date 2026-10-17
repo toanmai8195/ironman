@@ -7,13 +7,23 @@
   Test 4: lấy toàn bộ user của segment từ Mongo so với từ StarRocks                  (tới khi service có đủ user)
   Test 5: segment chỉ Mongo (tag Mongo -> segment Mongo) so với kiến trúc lai (SR tính segment rồi xuất sang Mongo)
 
+  Test 6: StarRocks tính, lưu segment rồi lấy toàn bộ user  so với  nạp tag từ StarRocks vào cache của service rồi tính ở service
+
+  Test 7: nạp segment lên service (cache miss), một luồng: từ Mongo so với từ bảng bitmap của StarRocks
+  Test 8: như test 7 nhưng 8 luồng cùng lúc
+
+  Test 9: check contains và lấy một trang 1000 user: chạy thẳng trên bitmap trong StarRocks so với trên bitmap đã nạp sẵn trong service (cache hit), 1 và 8 luồng
+
 Cùng gold cho mọi test (50 tag, mỗi tag 5 đến 10 triệu user). Bitmap trong Mongo lưu thành chunk tối đa 8MB,
 tối đa 10 chunk đọc hoặc ghi đồng thời.
 
 Thứ tự trong một chế độ (tiết kiệm chi phí, vẫn mỗi test chạy đủ các case):
   1. reset data, load gold, test 1 (t1-rows, t1-agg), xoá data
   2. reset data, load gold, test 2 (t2-agg, t2-sr), rồi test 3 (t3-mongo, t3-sr) và test 4 (t4-mongo, t4-sr) trên cùng data, xoá data
-  3. reset data, load gold, dựng tag trong Mongo và StarRocks (không tính vào test), test 5 (t5-mongo, t5-hybrid)
+  3. reset data, load gold, dựng tag trong Mongo và StarRocks (không tính vào test), test 5 (t5-mongo, t5-hybrid), xoá data
+  4. reset data, load gold, dựng tag trong StarRocks (không tính vào test), test 6 (t6-sr, t6-cache; 100 segment), xoá data
+  5. reset data, load gold, dựng tag và 300 segment trong StarRocks, xuất sang Mongo (không tính vào test), test 7 và 8, xoá data
+  6. reset data, load gold, dựng tag và 100 segment trong StarRocks (không tính vào test), test 9
 
 Dùng (từ thư mục gốc repo):
   python3 com/tm/star-rock-bitmap/bench_runner.py --mode limited      # giới hạn docker hiện tại
@@ -211,7 +221,7 @@ def load_gold(a, outdir, env):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["limited", "unlimited"], required=True)
-    ap.add_argument("--tests", default="t1,t234,t5", help="t1, t234 (test 2, 3, 4 chạy liền trên cùng data), t5")
+    ap.add_argument("--tests", default="t1,t234,t5,t6,t78,t9", help="t1, t234 (test 2, 3, 4 chạy liền trên cùng data), t5, t6, t78 (test 7, 8), t9")
     ap.add_argument("--segments", type=int, default=300)
     ap.add_argument("--full-gets", type=int, default=40)
     ap.add_argument("--universe", type=int, default=50000000)
@@ -240,6 +250,27 @@ def main():
             run_case(a, outdir, env, "setup", "setup-tag-sr", "etl", "b")
             run_case(a, outdir, env, "t5", "t5-mongo", "segment", "a")
             run_case(a, outdir, env, "t5", "t5-hybrid", "segment", "b", extra=["--export-to-mongo", "true"])
+        elif g == "t6":
+            # chuẩn bị (không tính vào test): bitmap tag trong StarRocks
+            run_case(a, outdir, env, "setup", "setup-tag-sr", "etl", "b")
+            run_case(a, outdir, env, "t6", "t6-sr", "e2e", "b", extra=["--segments", "100"])
+            run_case(a, outdir, env, "t6", "t6-cache", "e2e", "c", extra=["--segments", "100"])
+        elif g == "t78":
+            # chuẩn bị (không tính vào test): tag trong StarRocks, 300 segment tính trong StarRocks và xuất sang Mongo
+            run_case(a, outdir, env, "setup", "setup-tag-sr", "etl", "b")
+            run_case(a, outdir, env, "setup", "setup-segments", "segment", "b", extra=["--export-to-mongo", "true"])
+            run_case(a, outdir, env, "t7", "t7-mongo", "loadseg", "a", extra=["--threads", "1", "--loads", "2000"])
+            run_case(a, outdir, env, "t7", "t7-sr", "loadseg", "b", extra=["--threads", "1", "--loads", "2000"])
+            run_case(a, outdir, env, "t8", "t8-mongo", "loadseg", "a", extra=["--threads", "8", "--loads", "2000"])
+            run_case(a, outdir, env, "t8", "t8-sr", "loadseg", "b", extra=["--threads", "8", "--loads", "2000"])
+        elif g == "t9":
+            # chuẩn bị (không tính vào test): tag trong StarRocks và 100 segment (working set) trong StarRocks
+            run_case(a, outdir, env, "setup", "setup-tag-sr", "etl", "b")
+            run_case(a, outdir, env, "setup", "setup-segments", "segment", "b", extra=["--segments", "100"])
+            for case, pipe, op, th in (("t9-contains-sr", "b", "contains", "1"), ("t9-contains-cache", "c", "contains", "1"),
+                                       ("t9-page-sr", "b", "page", "1"), ("t9-page-cache", "c", "page", "1"),
+                                       ("t9-contains-sr8", "b", "contains", "8"), ("t9-page-sr8", "b", "page", "8")):
+                run_case(a, outdir, env, "t9", case, "ops", pipe, extra=["--segments", "100", "--op", op, "--threads", th])
         else:
             raise SystemExit(f"nhóm không hợp lệ: {g}")
         log(f"xong {g}")

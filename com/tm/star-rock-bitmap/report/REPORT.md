@@ -1,6 +1,6 @@
 # Báo cáo tổng: Mongo và StarRocks cho bài toán segmentation
 
-Report từng test: [test1-tag-rows-vs-agg.md](test1-tag-rows-vs-agg.md), [test2-tag-agg-vs-sr.md](test2-tag-agg-vs-sr.md), [test3-segment.md](test3-segment.md), [test4-getall.md](test4-getall.md), [test5-segment-hybrid.md](test5-segment-hybrid.md). Số liệu thô: `report/limited/` và `report/unlimited/`.
+Report từng test: [test1-tag-rows-vs-agg.md](test1-tag-rows-vs-agg.md), [test2-tag-agg-vs-sr.md](test2-tag-agg-vs-sr.md), [test3-segment.md](test3-segment.md), [test4-getall.md](test4-getall.md), [test5-segment-hybrid.md](test5-segment-hybrid.md), [test6-sr-vs-service-cache.md](test6-sr-vs-service-cache.md), [test7-load-segment.md](test7-load-segment.md), [test8-load-segment-parallel.md](test8-load-segment-parallel.md), [test9-contains-and-page.md](test9-contains-and-page.md). Số liệu thô: `report/limited/` và `report/unlimited/`.
 
 ## Kịch bản chung
 
@@ -23,6 +23,18 @@ Report từng test: [test1-tag-rows-vs-agg.md](test1-tag-rows-vs-agg.md), [test2
 | 4 | t4-sr: segment StarRocks → service | 1,378 | 1,408 |
 | 5 | t5-mongo: tag Mongo → segment Mongo (chỉ Mongo) | 154.1 | 158.1 |
 | 5 | t5-hybrid: tag StarRocks → segment StarRocks → Mongo (lai) | 157.4 | 157.3 |
+| 6 | t6-sr: StarRocks tính + lưu, rồi lấy toàn bộ user | 1,496 | 1,521 |
+| 6 | t6-cache: cache tag trong service, tính trong service | 54.3 | 57.8 |
+| 7 | t7-mongo: segment trong Mongo → service | 10.5 | 10.2 |
+| 7 | t7-sr: segment trong StarRocks → service | 32.3 | 29.3 |
+| 8 | t8-mongo: segment trong Mongo → service (8 luồng) | 86.9 | 17.5 |
+| 8 | t8-sr: segment trong StarRocks → service (8 luồng) | 77.6 | 49.8 |
+| 9 | t9-contains-sr: contains trực tiếp trên StarRocks (1 luồng) | 3.4 | 3.4 |
+| 9 | t9-contains-cache: contains trên cache của service (1 luồng) | 0.0 | 0.0 |
+| 9 | t9-page-sr: lấy 1000 user trực tiếp trên StarRocks (1 luồng) | 29.4 | 29.2 |
+| 9 | t9-page-cache: lấy 1000 user trên cache của service (1 luồng) | 0.0 | 0.0 |
+| 9 | t9-contains-sr8: contains trực tiếp trên StarRocks (8 luồng) | 6.8 | 6.6 |
+| 9 | t9-page-sr8: lấy 1000 user trực tiếp trên StarRocks (8 luồng) | 46.5 | 36.3 |
 
 ## Latency p90 (ms)
 
@@ -38,6 +50,18 @@ Report từng test: [test1-tag-rows-vs-agg.md](test1-tag-rows-vs-agg.md), [test2
 | 4 | t4-sr: segment StarRocks → service | 1,611 | 1,657 |
 | 5 | t5-mongo: tag Mongo → segment Mongo (chỉ Mongo) | 186.0 | 186.9 |
 | 5 | t5-hybrid: tag StarRocks → segment StarRocks → Mongo (lai) | 178.7 | 175.7 |
+| 6 | t6-sr: StarRocks tính + lưu, rồi lấy toàn bộ user | 1,795 | 1,816 |
+| 6 | t6-cache: cache tag trong service, tính trong service | 69.4 | 71.0 |
+| 7 | t7-mongo: segment trong Mongo → service | 13.5 | 12.1 |
+| 7 | t7-sr: segment trong StarRocks → service | 37.9 | 34.7 |
+| 8 | t8-mongo: segment trong Mongo → service (8 luồng) | 99.3 | 28.2 |
+| 8 | t8-sr: segment trong StarRocks → service (8 luồng) | 99.1 | 63.0 |
+| 9 | t9-contains-sr: contains trực tiếp trên StarRocks (1 luồng) | 5.1 | 5.5 |
+| 9 | t9-contains-cache: contains trên cache của service (1 luồng) | 0.0 | 0.0 |
+| 9 | t9-page-sr: lấy 1000 user trực tiếp trên StarRocks (1 luồng) | 51.8 | 51.9 |
+| 9 | t9-page-cache: lấy 1000 user trên cache của service (1 luồng) | 0.0 | 0.0 |
+| 9 | t9-contains-sr8: contains trực tiếp trên StarRocks (8 luồng) | 12.0 | 9.5 |
+| 9 | t9-page-sr8: lấy 1000 user trực tiếp trên StarRocks (8 luồng) | 77.8 | 61.1 |
 
 ## Latency p99 (ms)
 
@@ -53,6 +77,18 @@ Report từng test: [test1-tag-rows-vs-agg.md](test1-tag-rows-vs-agg.md), [test2
 | 4 | t4-sr: segment StarRocks → service | 1,753 | 1,798 |
 | 5 | t5-mongo: tag Mongo → segment Mongo (chỉ Mongo) | 212.0 | 207.9 |
 | 5 | t5-hybrid: tag StarRocks → segment StarRocks → Mongo (lai) | 247.1 | 273.1 |
+| 6 | t6-sr: StarRocks tính + lưu, rồi lấy toàn bộ user | 1,887 | 1,967 |
+| 6 | t6-cache: cache tag trong service, tính trong service | 76.8 | 81.7 |
+| 7 | t7-mongo: segment trong Mongo → service | 21.1 | 16.8 |
+| 7 | t7-sr: segment trong StarRocks → service | 47.2 | 42.8 |
+| 8 | t8-mongo: segment trong Mongo → service (8 luồng) | 178.1 | 116.2 |
+| 8 | t8-sr: segment trong StarRocks → service (8 luồng) | 114.8 | 86.0 |
+| 9 | t9-contains-sr: contains trực tiếp trên StarRocks (1 luồng) | 9.7 | 9.3 |
+| 9 | t9-contains-cache: contains trên cache của service (1 luồng) | 0.0 | 0.0 |
+| 9 | t9-page-sr: lấy 1000 user trực tiếp trên StarRocks (1 luồng) | 61.8 | 62.5 |
+| 9 | t9-page-cache: lấy 1000 user trên cache của service (1 luồng) | 0.1 | 0.1 |
+| 9 | t9-contains-sr8: contains trực tiếp trên StarRocks (8 luồng) | 33.5 | 13.4 |
+| 9 | t9-page-sr8: lấy 1000 user trực tiếp trên StarRocks (8 luồng) | 95.8 | 77.4 |
 
 ## Latency avg (ms)
 
@@ -68,6 +104,18 @@ Report từng test: [test1-tag-rows-vs-agg.md](test1-tag-rows-vs-agg.md), [test2
 | 4 | t4-sr: segment StarRocks → service | 1,379 | 1,408 |
 | 5 | t5-mongo: tag Mongo → segment Mongo (chỉ Mongo) | 159.0 | 161.5 |
 | 5 | t5-hybrid: tag StarRocks → segment StarRocks → Mongo (lai) | 162.3 | 162.1 |
+| 6 | t6-sr: StarRocks tính + lưu, rồi lấy toàn bộ user | 1,499 | 1,525 |
+| 6 | t6-cache: cache tag trong service, tính trong service | 56.4 | 58.9 |
+| 7 | t7-mongo: segment trong Mongo → service | 11.2 | 10.7 |
+| 7 | t7-sr: segment trong StarRocks → service | 33.0 | 30.5 |
+| 8 | t8-mongo: segment trong Mongo → service (8 luồng) | 71.4 | 20.8 |
+| 8 | t8-sr: segment trong StarRocks → service (8 luồng) | 76.9 | 52.0 |
+| 9 | t9-contains-sr: contains trực tiếp trên StarRocks (1 luồng) | 3.8 | 3.8 |
+| 9 | t9-contains-cache: contains trên cache của service (1 luồng) | 0.0 | 0.0 |
+| 9 | t9-page-sr: lấy 1000 user trực tiếp trên StarRocks (1 luồng) | 29.9 | 29.9 |
+| 9 | t9-page-cache: lấy 1000 user trên cache của service (1 luồng) | 0.0 | 0.0 |
+| 9 | t9-contains-sr8: contains trực tiếp trên StarRocks (8 luồng) | 9.0 | 7.2 |
+| 9 | t9-page-sr8: lấy 1000 user trực tiếp trên StarRocks (8 luồng) | 46.9 | 37.0 |
 
 ## Network mỗi lần đo và tài nguyên (có giới hạn)
 
@@ -83,48 +131,106 @@ Report từng test: [test1-tag-rows-vs-agg.md](test1-tag-rows-vs-agg.md), [test2
 | 4 | t4-sr | 92.2 | 0.1 | 1.01 | 0.85 | 0.06 | 3.4 |
 | 5 | t5-mongo | 60.7 | 6.1 | 1.02 | 0.06 | 0.42 | 2.9 |
 | 5 | t5-hybrid | 8.2 | 6.1 | 0.18 | 1.43 | 0.10 | 4.7 |
+| 6 | t6-sr | 95.3 | 0.1 | 0.93 | 1.09 | 0.06 | 3.9 |
+| 6 | t6-cache | 20.9 | 0.0 | 0.86 | 0.74 | 0.04 | 3.8 |
+| 7 | t7-mongo | 6.0 | 0.0 | 0.96 | 0.35 | 0.23 | 3.8 |
+| 7 | t7-sr | 8.2 | 0.0 | 0.51 | 0.66 | 0.06 | 3.6 |
+| 8 | t8-mongo | 6.0 | 0.0 | 2.02 | 0.04 | 0.45 | 3.1 |
+| 8 | t8-sr | 7.4 | 0.0 | 2.00 | 3.13 | 0.06 | 4.2 |
+| 9 | t9-contains-sr | 0.0 | 0.0 | 0.16 | 1.85 | 0.07 | 3.8 |
+| 9 | t9-contains-cache | 0.3 | 0.0 | 0.74 | 0.63 | 0.00 | 3.5 |
+| 9 | t9-page-sr | 0.0 | 0.0 | 0.04 | 1.12 | 0.06 | 3.3 |
+| 9 | t9-page-cache | 0.4 | 0.0 | 0.75 | 0.45 | 0.09 | 3.4 |
+| 9 | t9-contains-sr8 | 0.0 | 0.0 | 1.17 | 3.26 | 0.01 | 3.5 |
+| 9 | t9-page-sr8 | 0.0 | 0.0 | 0.23 | 5.10 | 0.09 | 3.5 |
 
-## Kết luận và khuyến nghị cho bài toán segmentation
+## Kiến trúc khuyến nghị và đánh đổi
 
-### Kết quả từng test (p50, ms; có giới hạn / không giới hạn)
+### Kết quả 9 test (p50, ms; có giới hạn / không giới hạn)
 
-| Test | Mongo | StarRocks | Nhận xét |
+| Test | Phương án | p50 | Ghi chú |
 |---|---|---|---|
-| 1. Tag: rows so với agg (cùng lưu Mongo) | rows 1692 / 1692, agg 233 / 172 | | agg nhanh hơn rows khoảng 7 đến 10 lần; rows kéo khoảng 96MB mỗi tag về service, agg chỉ khoảng 8MB |
-| 2. Tag: agg → Mongo so với bitmap trong StarRocks | 259 / 212 | 279 / 210 | gần ngang nhau (chênh dưới 10%); StarRocks không có network ra service |
-| 3. Tạo segment (kết quả lưu ở chính nơi tính) | 180 / 154 | 105 / 105 | StarRocks nhanh hơn khoảng 1,5 đến 1,7 lần; Mongo kéo khoảng 63MB mỗi segment về service |
-| 4. Lấy toàn bộ user của segment | 47 / 40 | 1378 / 1408 | Mongo nhanh hơn khoảng 29 đến 36 lần; StarRocks kéo khoảng 92MB mỗi lần (từng hàng) |
-| 5. Segment sẵn sàng trong Mongo: chỉ Mongo so với lai (SR tính, xuất sang Mongo) | chỉ Mongo 154 / 158 | lai 157 / 157 | latency gần như bằng nhau; lai: service dùng 0,18 core và nhận 8MB mỗi segment, chỉ Mongo: 1,02 core và 61MB mỗi segment |
-
-p99 (có giới hạn): test 3 Mongo 243ms, StarRocks 196ms; test 4 Mongo 85ms, StarRocks 1753ms; test 5 chỉ Mongo 212ms, lai 247ms.
+| 1. Tag, lưu Mongo | gold → rows | 1692 / 1692 | kéo khoảng 96MB mỗi tag về service |
+| | gold → agg | 233 / 172 | khoảng 8MB mỗi tag |
+| 2. Tag sẵn sàng | gold → agg → Mongo | 259 / 212 | |
+| | gold → bitmap trong StarRocks | 279 / 210 | ngang Mongo agg (chênh dưới 10%) |
+| 3. Tạo segment, lưu tại nơi tính | tag Mongo → segment Mongo | 180 / 154 | kéo khoảng 61MB về service |
+| | tag StarRocks → segment StarRocks | 105 / 105 | không có network ra service |
+| 4. Lấy toàn bộ user bằng `unnest` | segment Mongo → service | 47 / 40 | |
+| | segment StarRocks → service (trả từng hàng) | 1378 / 1408 | khoảng 92MB mỗi lần; xem nhận xét 3 |
+| 5. Segment sẵn sàng trong Mongo | chỉ Mongo | 154 / 158 | service 1,02 core |
+| | StarRocks tính, xuất sang Mongo | 157 / 157 | xuất thêm khoảng 54ms; service 0,18 core |
+| 6. Từ yêu cầu đến có toàn bộ user | StarRocks tính, lưu, lấy bằng `unnest` | 1496 / 1521 | |
+| | tag nạp vào cache service, tính ở service | 54 / 58 | tính 30ms + duyệt user 25ms; nạp lạnh 50 tag mất khoảng 1,6 giây |
+| 7. Nạp một segment lên service (cache miss), 1 luồng | từ Mongo (get chunk, giải mã) | 10,5 / 10,2 | khoảng 6,3MB; 89 / 94 lần nạp mỗi giây |
+| | từ StarRocks (`bitmap_to_base64`, giải mã) | 32,3 / 29,3 | khoảng 8,3MB (base64); 30 / 33 lần nạp mỗi giây |
+| 8. Nạp, 8 luồng cùng lúc | từ Mongo | 86,9 / 17,5 | 112 / 383 lần nạp mỗi giây; service dùng 2 / 6,5 core |
+| | từ StarRocks | 77,6 / 49,8 | 104 / 153 lần nạp mỗi giây; StarRocks dùng 3,1 / 4,4 core |
+| 9. contains | trực tiếp StarRocks (1 luồng) | 3,4 / 3,4 | 260 thao tác mỗi giây |
+| | trực tiếp StarRocks (8 luồng) | 6,8 / 6,6 | 881 / 1095 thao tác mỗi giây, StarRocks dùng 3,1 đến 3,3 core |
+| | cache hit trong service | 0,0007 | micro giây |
+| 9. lấy 1000 user | trực tiếp StarRocks (1 luồng) | 29,4 / 29,2 | vị trí bắt đầu ngẫu nhiên, 33 thao tác mỗi giây |
+| | trực tiếp StarRocks (8 luồng) | 46,5 / 36,3 | 170 / 215 thao tác mỗi giây, StarRocks dùng 5,1 đến 6,4 core (gần chạm giới hạn 6 core ở chế độ giới hạn) |
+| | cache hit trong service | 0,009 | micro giây |
 
 ### Điều rút ra từ số liệu
 
-1. **Không dùng gold → rows.** Chậm hơn agg 7 đến 10 lần ở bước tag, tốn network gấp khoảng 12 lần, bitmap kết quả như nhau.
-2. **Tạo bitmap tag: Mongo agg và StarRocks ngang nhau.** Cả hai cùng quét gold trong StarRocks; phần còn lại (ghi Mongo khoảng 20 đến 30ms hoặc ghi bảng bitmap của StarRocks) khác nhau không đáng kể so với nhiễu giữa các lần chạy.
-3. **Tạo segment: StarRocks tính nhanh hơn khi chỉ cần lưu trong StarRocks (105 so với 154 đến 180ms)**, nhưng nếu segment phải nằm trong Mongo thì bản lai tốn thêm khoảng 54ms để xuất (bitmap_to_base64 khoảng 21ms, giải mã khoảng 14ms, serialize khoảng 9ms, ghi chunk khoảng 9ms), và tổng bằng Mongo thuần (157 so với 154ms). Lợi thế của StarRocks vì vậy không nằm ở latency của một segment mà ở **tài nguyên**: service chỉ dùng 0,18 core thay vì 1,02 core, và nhận 8MB thay vì 61MB mỗi segment (Mongo thuần phải kéo 10 tag về; trong 154 đến 180ms thì tải chunk chỉ khoảng 18ms, còn giải mã và and/or/not khoảng 100 đến 123ms là việc CPU của service).
-4. **Chi phí CPU mỗi segment không nghiêng hẳn về StarRocks.** Đo trên nhịp chạy tuần tự của test 5: Mongo thuần dùng khoảng 0,17 core·giây ở service và 0,07 ở Mongo (tổng khoảng 0,24), còn bản lai dùng khoảng 0,32 core·giây ở StarRocks, 0,04 ở service và 0,02 ở Mongo (tổng khoảng 0,38). Tức là bản lai tiêu tốn CPU toàn hệ thống nhiều hơn, nhưng dồn vào StarRocks và giảm mạnh network. Đây là số tính từ một luồng chạy tuần tự, không phải đo khi tải song song.
-5. **Lấy toàn bộ user: Mongo thắng rõ** (khoảng 30 lần), và đây là lý do duy nhất để có Mongo trong kiến trúc. Mongo trả một blob khoảng 6,3MB rồi service duyệt trong bộ nhớ; StarRocks trả từng user dạng hàng qua giao thức MySQL (khoảng 92MB mỗi lần). Lưu ý: docker stats ghi service chỉ nhận khoảng 2,8MB mỗi lần ở Mongo, thấp hơn 6,3MB của blob vì case này chỉ chạy khoảng 2 giây nên thiếu mẫu; con số 6,3MB là theo kích thước blob.
-6. **Giới hạn tài nguyên (StarRocks 6 CPU, Mongo 3 CPU, service 2 CPU) chỉ làm chậm bước tag** (khoảng 18 đến 26%). Với segment và lấy toàn bộ user, chênh lệch nằm trong nhiễu: Mongo thuần cho segment có giới hạn là 180ms ở test 3 nhưng 154ms ở test 5 (cùng cấu hình), nên mức "cải thiện khi bỏ giới hạn" ở test 3 không đáng tin.
+1. **Không dùng gold → rows** (test 1): chậm hơn agg 7 đến 10 lần, tốn network gấp khoảng 12 lần.
+2. **Tạo bitmap tag: StarRocks và Mongo agg ngang nhau** (test 2). Chọn StarRocks để tag nằm sẵn nơi sẽ tính segment.
+3. **Lấy toàn bộ user bằng `unnest` là cách chậm, không phải đặc tính của StarRocks.** Test 4 và 6 đo `unnest` (trả từng hàng, 1,4 giây). Nạp cả bitmap từ StarRocks (test 7, khoảng 32ms) rồi duyệt trong bộ nhớ (25ms, test 6) khoảng 57ms, gần bằng 47ms của Mongo. Con số 57ms là tổng của hai phép đo riêng, chưa đo như một bước liền. Vì vậy kết luận trước đây "Mongo nhanh hơn 30 lần khi lấy toàn bộ user" chỉ đúng với cách `unnest`.
+4. **Tính segment trong StarRocks cho 105ms, không cần network ra service** (test 3). Nếu segment phải nằm cả trong Mongo thì phải xuất thêm khoảng 54ms (test 5), tổng 157ms bằng Mongo thuần.
+5. **Gọi thẳng StarRocks cho thao tác nhỏ đắt hơn nhiều so với cache hit.** contains 3,4ms, lấy 1000 user 29ms, và dưới tải 8 luồng, lấy 1000 user dùng 5 đến 6 core của StarRocks cho khoảng 170 đến 215 thao tác mỗi giây (khoảng 30ms CPU mỗi thao tác). Cache hit chỉ tốn micro giây.
+6. **Chi phí cache miss:** từ StarRocks khoảng 29 đến 32ms, từ Mongo khoảng 10ms; Mongo nhanh hơn khoảng 3 lần. Khi service có nhiều CPU thì thông lượng nạp song song của Mongo cũng gấp 2,5 lần (383 so với 153 lần nạp mỗi giây, không giới hạn) và StarRocks không bị tải (0,05 core so với 4,4 core). Khi service chỉ có 2 CPU (chế độ giới hạn), cả hai chững lại ở khoảng 104 đến 112 lần nạp mỗi giây vì giải mã bitmap là việc CPU của service, nhưng nạp từ StarRocks vẫn tốn 3,1 core của StarRocks.
+7. **Hoà vốn của việc cache:** nạp một segment rồi dùng nó từ cache rẻ hơn gọi thẳng StarRocks khi segment được dùng từ khoảng 9 lần trở lên (với contains) hoặc từ khoảng 1 lần (với lấy 1000 user); nếu nạp từ Mongo thì là khoảng 3 lần và dưới 1 lần.
+8. **Cache tag trong service (test 6) cho phép không lưu segment:** nạp 50 tag (khoảng 315MB) mất 1,6 giây một lần, rồi mỗi segment tính xong trong khoảng 54ms (kèm duyệt toàn bộ user), so với 1,5 giây nếu để StarRocks tính, lưu và trả từng hàng.
+9. **Giới hạn tài nguyên chỉ ảnh hưởng bước tag** (khoảng 18 đến 26%) và nạp song song (test 8); các test còn lại chênh trong nhiễu.
 
-### Khuyến nghị
+### Kiến trúc khuyến nghị
 
-**Mặc định: làm hết trong StarRocks (tag, segment đều là bitmap native trong StarRocks), không cần Mongo.** Chỉ thêm bước xuất sang Mongo nếu consumer lấy toàn bộ user của segment thường xuyên.
+```
+gold --(bitmap_agg trong StarRocks)--> bitmap tag (bảng StarRocks)
+                                          |
+                    (tính and/or/not trong StarRocks, 105ms)
+                                          v
+                              bitmap segment (bảng StarRocks)
+                                          |
+          service: Caffeine (miss: SELECT bitmap_to_base64, giải mã, ~32ms)
+                                          v
+              contains, lấy một trang user, lấy toàn bộ user: trên bitmap trong bộ nhớ
+```
 
 - **Tag:** gold → `bitmap_agg` trong StarRocks, lưu bảng bitmap. Không dùng gold → rows.
-- **Tạo segment:** tính và lưu ngay trong StarRocks (and/or/not trên bitmap native): p50 khoảng 105ms mỗi segment, không có network ra service, service gần như nhàn rỗi.
-- **Không có bước xuất, không có kho thứ hai:** tránh 54ms mỗi segment để xuất, tránh phải giữ Mongo và StarRocks đồng bộ, tránh vận hành thêm Mongo.
-- **Lấy toàn bộ user của segment từ StarRocks:** khoảng 1,4 giây mỗi lần (5 đến 10 triệu user), kéo khoảng 92MB. Đây là điểm yếu duy nhất của cách này.
+- **Tạo segment:** trong StarRocks (and/or/not trên bitmap native), lưu ngay trong bảng bitmap của StarRocks.
+- **Phục vụ:** service dùng Caffeine; segment chưa có trong cache thì nạp cả bitmap từ StarRocks bằng `bitmap_to_base64` (khoảng 32ms, không dùng `unnest` để lấy user). Trên cache: contains, lấy trang user, lấy toàn bộ user (duyệt khoảng 25ms cho 5 đến 10 triệu user).
+- **Chỉ gọi thẳng StarRocks (không cache)** cho segment ít dùng: contains khi dùng ít hơn khoảng 9 lần, lấy trang user khi dùng khoảng 1 lần. Đặt Caffeine có giới hạn trọng số (mỗi segment khoảng 6,3MB, 100 segment khoảng 630MB, 300 segment khoảng 1,9GB).
+- **Không cần Mongo trong cấu hình mặc định.**
 
-**Khi nào đáng thêm Mongo (xuất segment sang Mongo):** xuất tốn khoảng 54ms mỗi segment và tiết kiệm khoảng 1,33 giây mỗi lần lấy toàn bộ user (1378ms so với 47ms). Hoà vốn khi trung bình mỗi segment được lấy toàn bộ user từ khoảng 1 lần trên 25 segment trở lên (54 / 1330 khoảng 0,04 lần). Nếu một segment được lấy toàn bộ user nhiều hơn mức đó, hoặc consumer cần phản hồi dưới khoảng 100ms, thì nên xuất sang Mongo (kiến trúc lai: 157ms mỗi segment, bằng Mongo thuần, nhưng service dùng ít CPU hơn 5 lần và nhận ít network hơn 7 lần). Phép tính hoà vốn chỉ dựa trên latency, chưa tính chi phí lưu trữ và đồng bộ hai kho.
+### Đánh đổi
 
-**Không nên chạy toàn bộ trong service với Mongo** (kéo tag về service để tính) trừ khi muốn đơn giản và lưu lượng thấp: cùng khoảng 155ms mỗi segment nhưng tốn khoảng 61MB network và khoảng 1 core service cho mỗi segment, trong khi tổng CPU mỗi segment lại thấp nhất (khoảng 0,24 core·giây, so với 0,30 của StarRocks thuần và 0,38 của bản lai).
+| | A. StarRocks lưu segment, cache nạp từ StarRocks (khuyến nghị) | B. StarRocks tính, xuất sang Mongo, cache nạp từ Mongo | C. Tag cache trong service, tính tại service, không lưu segment |
+|---|---|---|---|
+| Ghi (tạo segment) | 105ms | 157ms (thêm 54ms xuất) | không có bước ghi |
+| Cache miss (nạp segment) | khoảng 32ms, 8,3MB | khoảng 10ms, 6,3MB | 54ms mỗi segment (tính tại chỗ, tag đã nằm trong cache) |
+| Tải lên StarRocks khi nạp | khoảng 0,03 core·giây mỗi lần nạp; 3,1 core ở 104 lần nạp mỗi giây | gần 0 | chỉ lúc nạp tag |
+| Thông lượng nạp song song (service nhiều CPU) | 153 lần nạp mỗi giây | 383 lần nạp mỗi giây | không áp dụng |
+| Số kho dữ liệu phải vận hành | 1 (StarRocks) | 2 (StarRocks và Mongo), phải giữ đồng bộ | 1 (StarRocks) |
+| RAM service | cache segment (khoảng 6,3MB mỗi segment) | giống A | cache tag cố định khoảng 315MB cho 50 tag, không phụ thuộc số segment |
+| CPU service | giải mã khoảng 14ms mỗi lần nạp | giống A | tính khoảng 30ms mỗi lần dùng |
+| Độ tươi | segment cũ cho đến khi tính lại | giống A | tag cập nhật thì phải nạp lại cache tag |
+| Điểm mạnh | đơn giản nhất, đủ tốt khi cache hit cao | nạp nhanh và rẻ hơn khi miss nhiều hoặc có nhiều service instance | không lưu và không đồng bộ segment, tính theo định nghĩa mới ngay |
+| Điểm yếu | mỗi lần miss tốn CPU của StarRocks; nhiều instance thì StarRocks bị gọi nhiều | thêm một kho, thêm 54ms mỗi segment, rủi ro lệch dữ liệu giữa hai kho | tốn CPU service cho mỗi lần dùng, chỉ hợp khi segment dùng ít lần hoặc định nghĩa thay đổi liên tục |
+
+**Khi nào chuyển từ A sang B:** Mongo tốn thêm 54ms một lần cho mỗi segment (khi tạo) và tiết kiệm khoảng 22ms mỗi lần cache miss, tức hoà vốn khi mỗi segment bị nạp từ kho khoảng 2 đến 3 lần trở lên trong vòng đời của nó. Điều đó xảy ra khi (1) có nhiều instance service, mỗi instance nạp riêng; (2) cache nhỏ so với số segment đang dùng nên bị loại thường xuyên; hoặc (3) StarRocks đã gần hết CPU. Nếu lưu lượng miss thấp, A đủ dùng.
+
+**Khi nào chọn C:** segment dùng ít lần (một lần hoặc vài lần), hoặc định nghĩa segment thay đổi liên tục. Cache tag là chi phí cố định (khoảng 315MB RAM, 1,6 giây nạp lạnh), rồi mỗi lần dùng 54ms.
 
 ### Giới hạn của kết luận này
 
-- Mọi test chạy tuần tự một luồng. Hành vi dưới tải song song (nhiều segment cùng lúc, StarRocks nhiều truy vấn đồng thời, Mongo nhiều kết nối) **chưa được đo**; các phép ước tính về mở rộng ở trên chỉ là suy luận từ chi phí mỗi segment.
-- Mọi bitmap tag và segment đều khoảng 6,3MB (nhỏ hơn 8MB), nên mỗi bitmap chỉ là một chunk; giới hạn 10 chunk đồng thời thực tế chỉ có nghĩa là 10 tag đọc song song. Nếu universe lớn hơn (bitmap vượt 8MB) cách chia chunk mới có tác dụng và kết quả của Mongo có thể khác.
-- Mỗi case chạy một lần cho mỗi chế độ, nên chênh lệch dưới khoảng 15% có thể là nhiễu (ví dụ Mongo thuần ở test 3 và test 5). CPU, RAM và network đo bằng `docker stats` mỗi 1 đến 2 giây, thô với case ngắn (test 1 agg, test 2, test 4 Mongo chỉ khoảng 2 đến 20 giây).
-- Compute của StarRocks (test 3) là cả câu SQL gồm tính và ghi; Mongo gồm tải, giải mã, tính, serialize và ghi. Bước `DELETE` segment cũ của StarRocks không nằm trong thời gian đo.
+- **Caffeine thật chưa được đo.** Trong test, cache là bộ nhớ nạp sẵn: không có loại bỏ (eviction), không có nhiều luồng cùng miss một segment (cache stampede), không có hit ratio thực tế. Các ngưỡng hoà vốn ở trên giả định mỗi lần nạp một segment đầy đủ.
+- **Tải thật chưa được đo.** Test 8 và 9 chạy 8 luồng, chỉ một loại thao tác mỗi lần. Chưa có tải hỗn hợp, nhiều service instance, hay StarRocks nhiều node.
+- **Cache tag (phương án C) chỉ đo khi tag không đổi.** Chi phí cập nhật cache khi tag đổi không được đo.
+- **Mỗi case chạy một lần mỗi chế độ**, nên chênh lệch dưới khoảng 15% có thể là nhiễu. CPU và RAM từ `docker stats` mỗi 1 đến 2 giây, thô với case ngắn. Network của service bị đo thiếu ở case ngắn (ví dụ test 7 Mongo: docker stats ghi service nhận 3,3MB mỗi lần trong khi Mongo gửi 6,3MB); khi đọc network nên dựa vào số gửi của nguồn (Mongo hoặc StarRocks).
+- **Bitmap luôn khoảng 6,3MB** (nhỏ hơn 8MB), nên mỗi bitmap chỉ là một chunk Mongo; giới hạn 10 chunk đồng thời thực tế là 10 tag hoặc 10 segment đọc song song. Nếu universe lớn hơn, bitmap vượt 8MB thì chi phí nạp cả hai bên đều tăng.
+- **Lấy trang 1000 user** ở test 9 dùng vị trí bắt đầu ngẫu nhiên (`bitmap_subset_limit`), 29ms. Ở lần đo trước dùng `unnest(...) LIMIT 1000` từ đầu bitmap, khoảng 8,5ms; chi phí phụ thuộc vị trí và cách viết câu truy vấn.
 - Kịch bản là segment 5 đến 10 triệu user trên universe 50 triệu; kết quả có thể khác với segment rất nhỏ hoặc rất lớn.
 

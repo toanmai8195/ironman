@@ -88,4 +88,32 @@ public class SegmentExprTest {
     assertEquals(1, MongoStore.slice(new byte[6_300_000], 8_000_000).size());
     assertEquals(1, MongoStore.slice(new byte[0], 8_000_000).size());
   }
+
+  @Test
+  public void evalPureMatchesEvalAndKeepsLeaves() throws Exception {
+    Random rng = new Random(11);
+    for (int round = 0; round < 30; round++) {
+      SegmentExpr e = SegmentExpr.random(rng, 15, 10);
+      Map<Integer, RoaringBitmap> a = new HashMap<>();
+      Map<Integer, RoaringBitmap> b = new HashMap<>();
+      Map<Integer, RoaringBitmap> orig = new HashMap<>();
+      for (int tg : e.tagIds()) {
+        RoaringBitmap bm = new RoaringBitmap();
+        for (int u = 0; u < 5000; u++) {
+          if (rng.nextInt(3) == 0) {
+            bm.add(u);
+          }
+        }
+        a.put(tg, bm.clone());
+        b.put(tg, bm.clone());
+        orig.put(tg, bm.clone());
+      }
+      RoaringBitmap pure = e.evalPure(a);
+      RoaringBitmap mutating = e.eval(b);
+      assertEquals(mutating, pure);
+      for (int tg : e.tagIds()) {
+        assertEquals(orig.get(tg), a.get(tg)); // evalPure không sửa bitmap của lá
+      }
+    }
+  }
 }

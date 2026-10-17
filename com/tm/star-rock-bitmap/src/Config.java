@@ -31,11 +31,22 @@ record Config(
     String test,
     String limits,
     String caseName,
-    boolean exportToMongo) {
+    boolean exportToMongo,
+    int coldLoads,
+    int loads,
+    int threads,
+    String op,
+    int ops,
+    int workingSet) {
 
   /** Chạy pipeline A (Mongo + service). */
   boolean runA() {
     return pipeline.contains("a");
+  }
+
+  /** Chạy pipeline C: nạp bitmap tag từ SR vào cache của service rồi tính trong service. */
+  boolean runC() {
+    return pipeline.contains("c");
   }
 
   /** Chạy pipeline B (SR native). */
@@ -110,6 +121,12 @@ record Config(
         m.getOrDefault("test", ""),
         m.getOrDefault("limits", ""),
         m.getOrDefault("case", ""),
-        Boolean.parseBoolean(m.getOrDefault("export-to-mongo", "false")));
+        Boolean.parseBoolean(m.getOrDefault("export-to-mongo", "false")),
+        Integer.parseInt(m.getOrDefault("cold-loads", "5")),
+        Integer.parseInt(m.getOrDefault("loads", "200")),
+        Integer.parseInt(m.getOrDefault("threads", "1")),
+        m.getOrDefault("op", "contains"),
+        Integer.parseInt(m.getOrDefault("ops", "2000")),
+        Integer.parseInt(m.getOrDefault("working-set", "100")));
   }
 }

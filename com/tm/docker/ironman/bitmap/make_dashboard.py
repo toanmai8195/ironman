@@ -31,6 +31,20 @@ TESTS = [
      "Latency từ khi bắt đầu lấy dữ liệu (Mongo: get 10 tag; lai: bắt đầu query StarRocks) đến khi segment đã lưu xong trong Mongo. "
      "t5-mongo: tải 10 tag, and/or/not ở service, ghi chunk. t5-hybrid: SR tính và lưu segment, rồi bitmap_to_base64, giải mã, ghi chunk Mongo.",
      "(A total.*|B hybrid total.*)", "segment"),
+    ("t6", "Test 6: StarRocks tính và lấy toàn bộ user so với nạp tag vào cache của service rồi tính",
+     "Latency từ khi có yêu cầu đến khi service có toàn bộ user của segment. t6-sr: StarRocks tính và lưu segment, rồi trả toàn bộ user (SELECT unnest). "
+     "t6-cache: tag nằm trong StarRocks, nạp lên cache của service, tính and/or/not trong bộ nhớ rồi duyệt hết user (nạp lạnh toàn bộ tag đo riêng ở bước C1).",
+     "(B e2e total.*|C segment total.*)", "segment"),
+    ("t7", "Test 7: nạp segment lên service (cache miss), một luồng: từ Mongo so với từ StarRocks",
+     "Latency từ khi bắt đầu nạp một segment đã lưu đến khi service có bitmap trong bộ nhớ. Mongo: get chunk, giải mã. StarRocks: SELECT bitmap_to_base64, giải mã.",
+     "(A load segment.*|B load segment.*)", "get"),
+    ("t8", "Test 8: nạp segment lên service, 8 luồng cùng lúc: từ Mongo so với từ StarRocks",
+     "Như test 7 nhưng 8 luồng nạp cùng lúc (mỗi luồng một connection StarRocks; Mongo tối đa 10 chunk đồng thời).",
+     "(A load segment.*|B load segment.*)", "get"),
+    ("t9", "Test 9: check contains và lấy 1000 user: trực tiếp trên StarRocks so với từ cache của service",
+     "Latency của một thao tác đọc nhỏ trên segment. StarRocks: một câu SQL mỗi lần (bitmap_contains, hoặc bitmap_subset_limit + unnest). "
+     "Cache: bitmap đã nạp sẵn trong bộ nhớ service (cache hit). Có cả 8 luồng cho StarRocks.",
+     "(B contains.*|C contains.*|B get 1000.*|C get 1000.*)", "get"),
 ]
 
 
@@ -84,7 +98,7 @@ def main():
         lat = [tgt(f'sum by (case) (bench_latency_ms_sum{{{main_sel}}})/sum by (case) (bench_latency_ms_count{{{main_sel}}})', "{{case}} avg", "A")]
         for k, q in enumerate(("0.5", "0.9", "0.99")):
             lat.append(tgt(f'max by (case) (bench_latency_ms_quantile{{{main_sel},quantile="{q}"}})', "{{case}} p" + str(int(float(q) * 100)), chr(66 + k)))
-        has_sub = tid != "t4"  # test 4 chỉ có một bước, không có bước con
+        has_sub = tid not in ("t4", "t7", "t8", "t9")  # test 4 chỉ có một bước, không có bước con
         panels.append(ts(pid, "Latency theo thời gian: avg, p50, p90, p99 (ms)",
                          "Số tích luỹ từ đầu case đến thời điểm đó (avg và phân vị của mọi lần đo tới lúc này).", lat, 0, y, 12 if has_sub else 24, 8, "ms", 1))
         pid += 1

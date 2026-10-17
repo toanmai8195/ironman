@@ -1,0 +1,107 @@
+{
+ "meta": {
+  "cmd": "segment",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B total: SQL compute + store": {
+   "n": 300,
+   "avg_ms": 110.89141,
+   "min_ms": 88.65971,
+   "p50_ms": 103.45396,
+   "p90_ms": 132.27663,
+   "p99_ms": 223.372,
+   "max_ms": 311.29408,
+   "sum_ms": 33267.422
+  },
+  "B2 export: SR bitmap_to_base64": {
+   "n": 300,
+   "avg_ms": 20.64711,
+   "min_ms": 14.17725,
+   "p50_ms": 19.34283,
+   "p90_ms": 26.82246,
+   "p99_ms": 42.27538,
+   "max_ms": 49.10167,
+   "sum_ms": 6194.132
+  },
+  "B3 export: decode SR bitmap": {
+   "n": 300,
+   "avg_ms": 14.03485,
+   "min_ms": 13.18271,
+   "p50_ms": 13.69479,
+   "p90_ms": 14.95375,
+   "p99_ms": 19.13425,
+   "max_ms": 33.71096,
+   "sum_ms": 4210.456
+  },
+  "B4 export: serialize": {
+   "n": 300,
+   "avg_ms": 10.73346,
+   "min_ms": 9.89038,
+   "p50_ms": 10.49104,
+   "p90_ms": 11.46779,
+   "p99_ms": 15.14354,
+   "max_ms": 27.50779,
+   "sum_ms": 3220.039
+  },
+  "B5 export: mongo put chunks (<=8MB, <=10 parallel)": {
+   "n": 300,
+   "avg_ms": 32.74636,
+   "min_ms": 7.58771,
+   "p50_ms": 26.01083,
+   "p90_ms": 59.319,
+   "p99_ms": 73.32358,
+   "max_ms": 80.38092,
+   "sum_ms": 9823.907
+  },
+  "B hybrid total: SR compute + export to mongo": {
+   "n": 300,
+   "avg_ms": 189.05319,
+   "min_ms": 141.30404,
+   "p50_ms": 182.87963,
+   "p90_ms": 224.96746,
+   "p99_ms": 312.14721,
+   "max_ms": 396.94279,
+   "sum_ms": 56715.956
+  }
+ },
+ "notes": {
+  "segment_users_b": 2224721316,
+  "segment_exported_users": 2224721316
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 1.3847432432432434,
+   "cpu_max": 1.8711000000000002,
+   "mem_max_gb": 4.654,
+   "net_rx_gb": 0.002238,
+   "net_tx_gb": 2.50378,
+   "samples": 37
+  },
+  "mongo": {
+   "cpu_avg": 0.19531891891891892,
+   "cpu_max": 0.6142,
+   "mem_max_gb": 1.986,
+   "net_rx_gb": 1.879754,
+   "net_tx_gb": 0.0035,
+   "samples": 37
+  },
+  "service": {
+   "cpu_avg": 0.16255555555555556,
+   "cpu_max": 0.512,
+   "mem_max_gb": 0.28427734375,
+   "net_rx_gb": 2.46,
+   "net_tx_gb": 1.85,
+   "samples": 36
+  }
+ },
+ "wall_seconds": 74.0,
+ "case": "setup-segments",
+ "test": "setup",
+ "limits": "limited"
+}

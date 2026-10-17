@@ -184,4 +184,271 @@ final class Bench {
       System.out.printf("getall %d/%d segment=%d users A=%d B=%d%n", i + 1, cfg.fullGets(), seg, a, b);
     }
   }
+
+  /** Nạp bitmap 1 tag từ SR về service (bitmap_to_base64 + giải mã). */
+  private static RoaringBitmap loadTagFromSr(Connection c, int tag, Stats st) throws Exception {
+    return st.time("C0 load one tag (SR bitmap_to_base64 + decode)", () -> {
+      String b64;
+      try (PreparedStatement ps = c.prepareStatement("SELECT bitmap_to_base64(bm) FROM bm_bench.tag_bitmap WHERE tag_id = ?")) {
+        ps.setInt(1, tag);
+        try (ResultSet rs = ps.executeQuery()) {
+          rs.next();
+          b64 = rs.getString(1);
+        }
+      }
+      return BitmapCodec.decodeStarRocks(b64);
+    });
+  }
+
+  /**
+   * Test 6: từ lúc có yêu cầu đến khi service có toàn bộ user của segment. B = StarRocks tính và lưu
+   * segment rồi lấy toàn bộ user về. C = nạp bitmap tag từ StarRocks vào cache của service (đo riêng
+   * nạp lạnh) rồi tính segment trong service từ cache và duyệt hết user.
+   */
+  static void e2e(Connection c, MongoStore mg, Config cfg, Stats st) throws Exception {
+    Map<Integer, RoaringBitmap> cache = new HashMap<>();
+    if (cfg.runC()) {
+      for (int rep = 0; rep < cfg.coldLoads(); rep++) {
+        cache.clear();
+        st.time("C1 cold load all tags (SR -> service cache)", () -> {
+          for (int t = 1; t <= cfg.tags(); t++) {
+            cache.put(t, loadTagFromSr(c, t, st));
+          }
+          return null;
+        });
+      }
+      long heap = cache.values().stream().mapToLong(RoaringBitmap::getLongSizeInBytes).sum();
+      System.out.printf("cache: %d tag, %.0fMB bitmap trong memory%n", cache.size(), heap / 1e6);
+    }
+    Random rng = new Random(cfg.seed());
+    for (int s = 1; s <= cfg.segments(); s++) {
+      final int seg = s;
+      SegmentExpr expr = SegmentExpr.randomInRange(rng, cfg.tags(), cfg.leaves(), cfg::tagPctFraction, cfg.segMin(), cfg.segMax());
+      long users = -1;
+      if (cfg.runC()) {
+        RoaringBitmap res = st.time("C2 compute and/or/not (cache)", () -> expr.evalPure(cache));
+        long n = st.time("C3 get all users (iterate, in memory)", () -> {
+          long k = 0;
+          var it = res.getIntIterator();
+          while (it.hasNext()) {
+            it.next();
+            k++;
+          }
+          return k;
+        });
+        st.add("C segment total: compute + all users (cache)", st.last("C2 compute and/or/not (cache)") + st.last("C3 get all users (iterate, in memory)"));
+        st.note("segment_users_c", n);
+        users = n;
+      }
+      if (cfg.runB()) {
+        try (PreparedStatement del = c.prepareStatement("DELETE FROM bm_bench.segment_bitmap WHERE segment_id = ?")) {
+          del.setInt(1, seg);
+          del.execute();
+        }
+        String sql = expr.insertSql(seg);
+        st.time("B total: SQL compute + store", () -> {
+          try (var stmt = c.createStatement()) {
+            return stmt.execute(sql);
+          }
+        });
+        long n = st.time("B get all users: SQL unnest", () -> {
+          try (var stmt = c.createStatement()) {
+            stmt.setFetchSize(Integer.MIN_VALUE);
+            long k = 0;
+            try (ResultSet rs = stmt.executeQuery("SELECT u FROM bm_bench.segment_bitmap, unnest(bitmap_to_array(bm)) AS t(u)"
+                + " WHERE segment_id = " + seg)) {
+              while (rs.next()) {
+                rs.getLong(1);
+                k++;
+              }
+            }
+            return k;
+          }
+        });
+        st.add("B e2e total: compute + store + get all users (SR)", st.last("B total: SQL compute + store") + st.last("B get all users: SQL unnest"));
+        st.note("segment_users_b", n);
+        users = n;
+      }
+      System.out.printf("e2e %d/%d users=%d  %s%n", seg, cfg.segments(), users, expr);
+    }
+  }
+
+  /**
+   * Test 7, 8: nạp bitmap của một segment đã lưu (Mongo hoặc bảng bitmap của StarRocks) lên service, như khi
+   * cache của service chưa có segment đó. Kết thúc khi service có RoaringBitmap trong bộ nhớ. Với --threads lớn hơn 1
+   * nhiều segment được nạp cùng lúc (mỗi luồng một connection StarRocks; Mongo tối đa 10 chunk đồng thời).
+   */
+  static void loadSegments(Connection c0, MongoStore mg, Config cfg, Stats st) throws Exception {
+    Random rng = new Random(cfg.seed() + 3);
+    List<Integer> segs = new ArrayList<>();
+    for (int i = 0; i < cfg.loads(); i++) {
+      segs.add(1 + rng.nextInt(cfg.segments()));
+    }
+    java.util.concurrent.ExecutorService ex = java.util.concurrent.Executors.newFixedThreadPool(cfg.threads());
+    ThreadLocal<Connection> conns = new ThreadLocal<>();
+    List<Connection> opened = java.util.Collections.synchronizedList(new ArrayList<>());
+    long wall = System.nanoTime();
+    List<java.util.concurrent.Future<?>> fs = new ArrayList<>();
+    for (int seg : segs) {
+      fs.add(ex.submit(() -> {
+        if (cfg.runA()) {
+          long n = st.time("A load segment: mongo get chunks + deserialize", () -> {
+            byte[] raw = mg.get(List.of(MongoStore.segmentKey(seg))).get(MongoStore.segmentKey(seg));
+            return BitmapCodec.deserialize(raw).getLongCardinality();
+          });
+          st.note("users_loaded_a", n);
+        }
+        if (cfg.runB()) {
+          Connection c = conns.get();
+          if (c == null) {
+            c = java.sql.DriverManager.getConnection(cfg.srUrl(), cfg.srUser(), cfg.srPassword());
+            conns.set(c);
+            opened.add(c);
+          }
+          final Connection cc = c;
+          long n = st.time("B load segment: SR bitmap_to_base64 + decode", () -> {
+            String b64;
+            try (PreparedStatement ps = cc.prepareStatement("SELECT bitmap_to_base64(bm) FROM bm_bench.segment_bitmap WHERE segment_id = ?")) {
+              ps.setInt(1, seg);
+              try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                b64 = rs.getString(1);
+              }
+            }
+            return BitmapCodec.decodeStarRocks(b64).getLongCardinality();
+          });
+          st.note("users_loaded_b", n);
+        }
+        return null;
+      }));
+    }
+    for (var f : fs) {
+      f.get();
+    }
+    long wallMs = (System.nanoTime() - wall) / 1_000_000;
+    ex.shutdown();
+    for (Connection oc : opened) {
+      oc.close();
+    }
+    st.note("wall_ms", wallMs);
+    st.note("loads", cfg.loads());
+    System.out.printf("load segment: %d lần, %d luồng, %d ms, %.1f lần/giây%n", cfg.loads(), cfg.threads(), wallMs, cfg.loads() * 1000.0 / wallMs);
+  }
+
+  /** Nạp bitmap của 1 segment từ bảng bitmap của SR (bitmap_to_base64 + giải mã). */
+  private static RoaringBitmap loadSegmentFromSr(Connection c, int seg, Stats st, String stepName) throws Exception {
+    return st.time(stepName, () -> {
+      String b64;
+      try (PreparedStatement ps = c.prepareStatement("SELECT bitmap_to_base64(bm) FROM bm_bench.segment_bitmap WHERE segment_id = ?")) {
+        ps.setInt(1, seg);
+        try (ResultSet rs = ps.executeQuery()) {
+          rs.next();
+          b64 = rs.getString(1);
+        }
+      }
+      return BitmapCodec.decodeStarRocks(b64);
+    });
+  }
+
+  /**
+   * Test 9: check contains hoặc lấy một trang 1000 user của segment. B = chạy thẳng trên bitmap trong SR (một câu SQL mỗi lần);
+   * C = trên bitmap đã nạp sẵn trong bộ nhớ của service (cache hit). Cùng danh sách thao tác cho cả hai để so kết quả.
+   */
+  static void ops(Connection c0, MongoStore mg, Config cfg, Stats st) throws Exception {
+    Random rng = new Random(cfg.seed() + 4);
+    List<Integer> ws = new ArrayList<>();
+    for (int i = 1; i <= Math.min(cfg.workingSet(), cfg.segments()); i++) {
+      ws.add(i);
+    }
+    Map<Integer, RoaringBitmap> cache = new java.util.concurrent.ConcurrentHashMap<>();
+    if (cfg.runC()) {
+      for (int seg : ws) {
+        cache.put(seg, loadSegmentFromSr(c0, seg, st, "C0 load segment (SR bitmap_to_base64 + decode)"));
+      }
+      long mem = cache.values().stream().mapToLong(RoaringBitmap::getLongSizeInBytes).sum();
+      System.out.printf("cache: %d segment, %.0fMB bitmap trong memory%n", cache.size(), mem / 1e6);
+    }
+    int[][] work = new int[cfg.ops()][2];
+    for (int i = 0; i < cfg.ops(); i++) {
+      work[i][0] = ws.get(rng.nextInt(ws.size()));
+      work[i][1] = rng.nextInt(cfg.universe());
+    }
+    boolean contains = cfg.op().equals("contains");
+    java.util.concurrent.ExecutorService ex = java.util.concurrent.Executors.newFixedThreadPool(cfg.threads());
+    ThreadLocal<Connection> conns = new ThreadLocal<>();
+    List<Connection> opened = java.util.Collections.synchronizedList(new ArrayList<>());
+    long wall = System.nanoTime();
+    List<java.util.concurrent.Future<?>> fs = new ArrayList<>();
+    for (int[] w : work) {
+      fs.add(ex.submit(() -> {
+        int seg = w[0];
+        int val = w[1];
+        if (cfg.runC()) {
+          RoaringBitmap bm = cache.get(seg);
+          if (contains) {
+            boolean r = st.time("C contains (cache hit)", () -> bm.contains(val));
+            st.note("contains_true", r ? 1 : 0);
+          } else {
+            int n = st.time("C get 1000 users page (cache hit)", () -> {
+              var it = bm.getBatchIterator();
+              it.advanceIfNeeded(val);
+              int[] buf = new int[1000];
+              return it.nextBatch(buf);
+            });
+            st.note("page_users", n);
+          }
+        }
+        if (cfg.runB()) {
+          Connection c = conns.get();
+          if (c == null) {
+            c = java.sql.DriverManager.getConnection(cfg.srUrl(), cfg.srUser(), cfg.srPassword());
+            conns.set(c);
+            opened.add(c);
+          }
+          final Connection cc = c;
+          if (contains) {
+            boolean r = st.time("B contains: SR bitmap_contains", () -> {
+              try (PreparedStatement ps = cc.prepareStatement("SELECT bitmap_contains(bm, ?) FROM bm_bench.segment_bitmap WHERE segment_id = ?")) {
+                ps.setInt(1, val);
+                ps.setInt(2, seg);
+                try (ResultSet rs = ps.executeQuery()) {
+                  return rs.next() && rs.getBoolean(1);
+                }
+              }
+            });
+            st.note("contains_true", r ? 1 : 0);
+          } else {
+            int n = st.time("B get 1000 users page: SR bitmap_subset_limit + unnest", () -> {
+              try (PreparedStatement ps = cc.prepareStatement(
+                  "SELECT u FROM bm_bench.segment_bitmap, unnest(bitmap_to_array(bitmap_subset_limit(bm, ?, 1000))) AS t(u) WHERE segment_id = ?")) {
+                ps.setInt(1, val);
+                ps.setInt(2, seg);
+                int k = 0;
+                try (ResultSet rs = ps.executeQuery()) {
+                  while (rs.next()) {
+                    rs.getLong(1);
+                    k++;
+                  }
+                }
+                return k;
+              }
+            });
+            st.note("page_users", n);
+          }
+        }
+        return null;
+      }));
+    }
+    for (var f : fs) {
+      f.get();
+    }
+    long wallMs = (System.nanoTime() - wall) / 1_000_000;
+    ex.shutdown();
+    for (Connection oc : opened) {
+      oc.close();
+    }
+    st.note("wall_ms", wallMs);
+    st.note("loads", cfg.ops());
+    System.out.printf("ops %s: %d lần, %d luồng, %d ms, %.0f lần/giây%n", cfg.op(), cfg.ops(), cfg.threads(), wallMs, cfg.ops() * 1000.0 / wallMs);
+  }
 }
