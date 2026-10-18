@@ -1,0 +1,104 @@
+{
+ "meta": {
+  "cmd": "etl",
+  "pipeline": "a",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A1a SR agg+ship": {
+   "n": 50,
+   "avg_ms": 215.202,
+   "min_ms": 116.805,
+   "p50_ms": 218.362,
+   "p90_ms": 266.686,
+   "p99_ms": 425.89,
+   "max_ms": 425.89,
+   "sum_ms": 10760.123
+  },
+  "A1b decode SR bitmap": {
+   "n": 50,
+   "avg_ms": 14.809,
+   "min_ms": 13.34,
+   "p50_ms": 14.242,
+   "p90_ms": 15.401,
+   "p99_ms": 34.322,
+   "max_ms": 34.322,
+   "sum_ms": 740.458
+  },
+  "A1 total: SR -> bitmap": {
+   "n": 50,
+   "avg_ms": 230.058,
+   "min_ms": 130.789,
+   "p50_ms": 232.021,
+   "p90_ms": 280.422,
+   "p99_ms": 461.394,
+   "max_ms": 461.394,
+   "sum_ms": 11502.889
+  },
+  "A2 serialize": {
+   "n": 50,
+   "avg_ms": 9.731,
+   "min_ms": 8.865,
+   "p50_ms": 9.518,
+   "p90_ms": 9.968,
+   "p99_ms": 16.028,
+   "max_ms": 16.028,
+   "sum_ms": 486.533
+  },
+  "A3 mongo put chunks (<=8MB, <=10 parallel)": {
+   "n": 50,
+   "avg_ms": 31.129,
+   "min_ms": 8.007,
+   "p50_ms": 26.791,
+   "p90_ms": 54.441,
+   "p99_ms": 63.458,
+   "max_ms": 63.458,
+   "sum_ms": 1556.427
+  },
+  "A tag total: gold -> mongo": {
+   "n": 50,
+   "avg_ms": 270.917,
+   "min_ms": 180.515,
+   "p50_ms": 271.865,
+   "p90_ms": 313.305,
+   "p99_ms": 501.428,
+   "max_ms": 501.428,
+   "sum_ms": 13545.849
+  }
+ },
+ "notes": {},
+ "resources": {
+  "sr": {
+   "cpu_avg": 3.3213125,
+   "cpu_max": 4.6273,
+   "mem_max_gb": 3.595,
+   "net_rx_gb": 0.0002911,
+   "net_tx_gb": 0.41886,
+   "samples": 8
+  },
+  "mongo": {
+   "cpu_avg": 0.18415,
+   "cpu_max": 0.4904,
+   "mem_max_gb": 0.4728515625,
+   "net_rx_gb": 0.31379,
+   "net_tx_gb": 0.00067,
+   "samples": 8
+  },
+  "service": {
+   "cpu_avg": 0.18575714285714287,
+   "cpu_max": 0.4587,
+   "mem_max_gb": 0.2845703125,
+   "net_rx_gb": 0.393,
+   "net_tx_gb": 0.295,
+   "samples": 7
+  }
+ },
+ "wall_seconds": 14.8,
+ "case": "setup-tag-mongo",
+ "test": "setup",
+ "limits": "limited"
+}

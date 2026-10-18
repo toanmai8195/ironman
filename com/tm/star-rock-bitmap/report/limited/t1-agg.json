@@ -1,0 +1,104 @@
+{
+ "meta": {
+  "cmd": "etl",
+  "pipeline": "a",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A1a SR agg+ship": {
+   "n": 50,
+   "avg_ms": 199.788,
+   "min_ms": 119.064,
+   "p50_ms": 203.293,
+   "p90_ms": 238.322,
+   "p99_ms": 315.552,
+   "max_ms": 315.552,
+   "sum_ms": 9989.381
+  },
+  "A1b decode SR bitmap": {
+   "n": 50,
+   "avg_ms": 14.222,
+   "min_ms": 13.256,
+   "p50_ms": 13.567,
+   "p90_ms": 14.529,
+   "p99_ms": 33.666,
+   "max_ms": 33.666,
+   "sum_ms": 711.125
+  },
+  "A1 total: SR -> bitmap": {
+   "n": 50,
+   "avg_ms": 214.061,
+   "min_ms": 132.54,
+   "p50_ms": 216.776,
+   "p90_ms": 251.795,
+   "p99_ms": 350.447,
+   "max_ms": 350.447,
+   "sum_ms": 10703.044
+  },
+  "A2 serialize": {
+   "n": 50,
+   "avg_ms": 9.993,
+   "min_ms": 9.098,
+   "p50_ms": 9.51,
+   "p90_ms": 11.21,
+   "p99_ms": 15.957,
+   "max_ms": 15.957,
+   "sum_ms": 499.665
+  },
+  "A3 mongo put chunks (<=8MB, <=10 parallel)": {
+   "n": 50,
+   "avg_ms": 6.635,
+   "min_ms": 4.832,
+   "p50_ms": 5.289,
+   "p90_ms": 7.299,
+   "p99_ms": 31.234,
+   "max_ms": 31.234,
+   "sum_ms": 331.761
+  },
+  "A tag total: gold -> mongo": {
+   "n": 50,
+   "avg_ms": 230.689,
+   "min_ms": 149.259,
+   "p50_ms": 233.191,
+   "p90_ms": 267.093,
+   "p99_ms": 384.716,
+   "max_ms": 384.716,
+   "sum_ms": 11534.469
+  }
+ },
+ "notes": {},
+ "resources": {
+  "sr": {
+   "cpu_avg": 3.0936857142857144,
+   "cpu_max": 4.0039,
+   "mem_max_gb": 3.411,
+   "net_rx_gb": 0.00025,
+   "net_tx_gb": 0.42,
+   "samples": 7
+  },
+  "mongo": {
+   "cpu_avg": 0.06791428571428572,
+   "cpu_max": 0.32530000000000003,
+   "mem_max_gb": 0.55654296875,
+   "net_rx_gb": 0.313,
+   "net_tx_gb": 0.00067,
+   "samples": 7
+  },
+  "service": {
+   "cpu_avg": 0.21084999999999998,
+   "cpu_max": 0.5537,
+   "mem_max_gb": 0.2662109375,
+   "net_rx_gb": 0.393,
+   "net_tx_gb": 0.295,
+   "samples": 6
+  }
+ },
+ "wall_seconds": 12.7,
+ "case": "t1-agg",
+ "test": "t1",
+ "limits": "limited"
+}

@@ -1,0 +1,104 @@
+{
+ "meta": {
+  "cmd": "etl",
+  "pipeline": "a",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A1a SR agg+ship": {
+   "n": 50,
+   "avg_ms": 144.288,
+   "min_ms": 99.857,
+   "p50_ms": 139.953,
+   "p90_ms": 185.374,
+   "p99_ms": 243.827,
+   "max_ms": 243.827,
+   "sum_ms": 7214.401
+  },
+  "A1b decode SR bitmap": {
+   "n": 50,
+   "avg_ms": 14.969,
+   "min_ms": 13.853,
+   "p50_ms": 14.184,
+   "p90_ms": 16.042,
+   "p99_ms": 32.757,
+   "max_ms": 32.757,
+   "sum_ms": 748.439
+  },
+  "A1 total: SR -> bitmap": {
+   "n": 50,
+   "avg_ms": 159.301,
+   "min_ms": 113.816,
+   "p50_ms": 154.863,
+   "p90_ms": 199.528,
+   "p99_ms": 270.054,
+   "max_ms": 270.054,
+   "sum_ms": 7965.067
+  },
+  "A2 serialize": {
+   "n": 50,
+   "avg_ms": 10.702,
+   "min_ms": 8.883,
+   "p50_ms": 10.398,
+   "p90_ms": 12.366,
+   "p99_ms": 19.586,
+   "max_ms": 19.586,
+   "sum_ms": 535.115
+  },
+  "A3 mongo put chunks (<=8MB, <=10 parallel)": {
+   "n": 50,
+   "avg_ms": 6.756,
+   "min_ms": 4.792,
+   "p50_ms": 5.19,
+   "p90_ms": 7.975,
+   "p99_ms": 30.543,
+   "max_ms": 30.543,
+   "sum_ms": 337.776
+  },
+  "A tag total: gold -> mongo": {
+   "n": 50,
+   "avg_ms": 176.759,
+   "min_ms": 129.107,
+   "p50_ms": 172.373,
+   "p90_ms": 217.629,
+   "p99_ms": 311.711,
+   "max_ms": 311.711,
+   "sum_ms": 8837.959
+  }
+ },
+ "notes": {},
+ "resources": {
+  "sr": {
+   "cpu_avg": 4.3095,
+   "cpu_max": 4.7055,
+   "mem_max_gb": 5.111,
+   "net_rx_gb": 0.00025,
+   "net_tx_gb": 0.42,
+   "samples": 5
+  },
+  "mongo": {
+   "cpu_avg": 0.10006,
+   "cpu_max": 0.3784,
+   "mem_max_gb": 0.46875,
+   "net_rx_gb": 0.313,
+   "net_tx_gb": 0.00051,
+   "samples": 5
+  },
+  "service": {
+   "cpu_avg": 0.32911999999999997,
+   "cpu_max": 0.6675,
+   "mem_max_gb": 0.3037109375,
+   "net_rx_gb": 0.418,
+   "net_tx_gb": 0.314,
+   "samples": 5
+  }
+ },
+ "wall_seconds": 10.1,
+ "case": "t1-agg",
+ "test": "t1",
+ "limits": "unlimited"
+}

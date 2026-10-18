@@ -1,0 +1,76 @@
+{
+ "meta": {
+  "cmd": "e2e",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 50,
+  "segments": 100,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B total: SQL compute + store": {
+   "n": 100,
+   "avg_ms": 105.218,
+   "min_ms": 90.599,
+   "p50_ms": 101.145,
+   "p90_ms": 114.494,
+   "p99_ms": 210.137,
+   "max_ms": 248.304,
+   "sum_ms": 10521.799
+  },
+  "B get all users: SQL unnest": {
+   "n": 100,
+   "avg_ms": 1394.069,
+   "min_ms": 991.755,
+   "p50_ms": 1400.237,
+   "p90_ms": 1696.279,
+   "p99_ms": 1788.787,
+   "max_ms": 1816.537,
+   "sum_ms": 139406.913
+  },
+  "B e2e total: compute + store + get all users (SR)": {
+   "n": 100,
+   "avg_ms": 1499.287,
+   "min_ms": 1092.948,
+   "p50_ms": 1495.995,
+   "p90_ms": 1794.835,
+   "p99_ms": 1887.265,
+   "max_ms": 1911.097,
+   "sum_ms": 149928.712
+  }
+ },
+ "notes": {
+  "segment_users_b": 748103101
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 1.090248051948052,
+   "cpu_max": 1.5368000000000002,
+   "mem_max_gb": 3.913,
+   "net_rx_gb": 0.007996999999999999,
+   "net_tx_gb": 9.57378,
+   "samples": 77
+  },
+  "mongo": {
+   "cpu_avg": 0.06264025974025973,
+   "cpu_max": 0.33130000000000004,
+   "mem_max_gb": 0.25078125,
+   "net_rx_gb": 0.00026,
+   "net_tx_gb": 0.00542,
+   "samples": 77
+  },
+  "service": {
+   "cpu_avg": 0.9275315789473685,
+   "cpu_max": 1.0438,
+   "mem_max_gb": 0.2185546875,
+   "net_rx_gb": 9.53,
+   "net_tx_gb": 0.00818,
+   "samples": 76
+  }
+ },
+ "wall_seconds": 153.7,
+ "case": "t6-sr",
+ "test": "t6",
+ "limits": "limited"
+}

@@ -1,0 +1,107 @@
+{
+ "meta": {
+  "cmd": "segment",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B total: SQL compute + store": {
+   "n": 300,
+   "avg_ms": 107.7369,
+   "min_ms": 80.50463,
+   "p50_ms": 103.55979,
+   "p90_ms": 123.46838,
+   "p99_ms": 170.83021,
+   "max_ms": 251.40663,
+   "sum_ms": 32321.07
+  },
+  "B2 export: SR bitmap_to_base64": {
+   "n": 300,
+   "avg_ms": 21.20566,
+   "min_ms": 14.54354,
+   "p50_ms": 19.88046,
+   "p90_ms": 27.14967,
+   "p99_ms": 38.18733,
+   "max_ms": 46.3455,
+   "sum_ms": 6361.699
+  },
+  "B3 export: decode SR bitmap": {
+   "n": 300,
+   "avg_ms": 14.86619,
+   "min_ms": 13.85113,
+   "p50_ms": 14.25229,
+   "p90_ms": 15.76421,
+   "p99_ms": 25.0355,
+   "max_ms": 31.7845,
+   "sum_ms": 4459.857
+  },
+  "B4 export: serialize": {
+   "n": 300,
+   "avg_ms": 11.16979,
+   "min_ms": 8.1955,
+   "p50_ms": 10.78383,
+   "p90_ms": 11.90383,
+   "p99_ms": 13.96338,
+   "max_ms": 60.27125,
+   "sum_ms": 3350.937
+  },
+  "B5 export: mongo put chunks (<=8MB, <=10 parallel)": {
+   "n": 300,
+   "avg_ms": 36.15972,
+   "min_ms": 8.887,
+   "p50_ms": 29.75346,
+   "p90_ms": 60.82925,
+   "p99_ms": 85.27625,
+   "max_ms": 385.38579,
+   "sum_ms": 10847.915
+  },
+  "B hybrid total: SR compute + export to mongo": {
+   "n": 300,
+   "avg_ms": 191.13826,
+   "min_ms": 133.53504,
+   "p50_ms": 187.98434,
+   "p90_ms": 219.12083,
+   "p99_ms": 327.49738,
+   "max_ms": 571.32817,
+   "sum_ms": 57341.478
+  }
+ },
+ "notes": {
+  "segment_users_b": 2224721316,
+  "segment_exported_users": 2224721316
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 1.3968486486486487,
+   "cpu_max": 1.8391,
+   "mem_max_gb": 7.254,
+   "net_rx_gb": 0.002209,
+   "net_tx_gb": 2.50398,
+   "samples": 37
+  },
+  "mongo": {
+   "cpu_avg": 0.20087297297297296,
+   "cpu_max": 0.5225,
+   "mem_max_gb": 2.059,
+   "net_rx_gb": 1.879754,
+   "net_tx_gb": 0.0034,
+   "samples": 37
+  },
+  "service": {
+   "cpu_avg": 0.17528333333333335,
+   "cpu_max": 0.46409999999999996,
+   "mem_max_gb": 0.321484375,
+   "net_rx_gb": 2.46,
+   "net_tx_gb": 1.85,
+   "samples": 36
+  }
+ },
+ "wall_seconds": 74.1,
+ "case": "setup-segments",
+ "test": "setup",
+ "limits": "unlimited"
+}

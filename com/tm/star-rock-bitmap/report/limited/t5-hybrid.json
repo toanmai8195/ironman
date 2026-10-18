@@ -1,0 +1,107 @@
+{
+ "meta": {
+  "cmd": "segment",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B total: SQL compute + store": {
+   "n": 300,
+   "avg_ms": 108.308,
+   "min_ms": 79.298,
+   "p50_ms": 104.042,
+   "p90_ms": 119.55,
+   "p99_ms": 175.698,
+   "max_ms": 315.384,
+   "sum_ms": 32492.528
+  },
+  "B2 export: SR bitmap_to_base64": {
+   "n": 300,
+   "avg_ms": 20.649,
+   "min_ms": 14.405,
+   "p50_ms": 19.619,
+   "p90_ms": 25.888,
+   "p99_ms": 38.096,
+   "max_ms": 41.382,
+   "sum_ms": 6194.686
+  },
+  "B3 export: decode SR bitmap": {
+   "n": 300,
+   "avg_ms": 14.449,
+   "min_ms": 13.573,
+   "p50_ms": 14.007,
+   "p90_ms": 15.439,
+   "p99_ms": 22.983,
+   "max_ms": 33.317,
+   "sum_ms": 4334.757
+  },
+  "B4 export: serialize": {
+   "n": 300,
+   "avg_ms": 9.514,
+   "min_ms": 8.868,
+   "p50_ms": 9.408,
+   "p90_ms": 9.931,
+   "p99_ms": 11.531,
+   "max_ms": 15.775,
+   "sum_ms": 2854.221
+  },
+  "B5 export: mongo put chunks (<=8MB, <=10 parallel)": {
+   "n": 300,
+   "avg_ms": 9.333,
+   "min_ms": 5.69,
+   "p50_ms": 8.225,
+   "p90_ms": 14.467,
+   "p99_ms": 20.015,
+   "max_ms": 63.636,
+   "sum_ms": 2799.936
+  },
+  "B hybrid total: SR compute + export to mongo": {
+   "n": 300,
+   "avg_ms": 162.254,
+   "min_ms": 131.159,
+   "p50_ms": 157.351,
+   "p90_ms": 178.671,
+   "p99_ms": 247.135,
+   "max_ms": 377.883,
+   "sum_ms": 48676.129
+  }
+ },
+ "notes": {
+  "segment_users_b": 2224721316,
+  "segment_exported_users": 2224721316
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 1.4310121212121212,
+   "cpu_max": 1.9519,
+   "mem_max_gb": 4.73,
+   "net_rx_gb": 0.002216,
+   "net_tx_gb": 2.503,
+   "samples": 33
+  },
+  "mongo": {
+   "cpu_avg": 0.09800606060606061,
+   "cpu_max": 0.39659999999999995,
+   "mem_max_gb": 2.247,
+   "net_rx_gb": 1.88,
+   "net_tx_gb": 0.0,
+   "samples": 33
+  },
+  "service": {
+   "cpu_avg": 0.17875,
+   "cpu_max": 0.5075,
+   "mem_max_gb": 0.27490234375,
+   "net_rx_gb": 2.46,
+   "net_tx_gb": 1.84,
+   "samples": 32
+  }
+ },
+ "wall_seconds": 65.9,
+ "case": "t5-hybrid",
+ "test": "t5",
+ "limits": "limited"
+}

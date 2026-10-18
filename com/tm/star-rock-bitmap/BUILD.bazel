@@ -1,0 +1,39 @@
+load("@rules_java//java:defs.bzl", "java_binary", "java_library", "java_test")
+
+java_library(
+    name = "bitmap_lib",
+    srcs = glob(
+        ["src/*.java"],
+        exclude = [
+            "src/Main.java",
+            "src/*Test.java",
+        ],
+    ),
+    deps = [
+        "@maven//:com_mysql_mysql_connector_j",
+        "@maven//:org_mongodb_bson",
+        "@maven//:org_mongodb_mongodb_driver_core",
+        "@maven//:org_mongodb_mongodb_driver_sync",
+        "@maven//:org_roaringbitmap_RoaringBitmap",
+    ],
+)
+
+# bazel run //com/tm/star-rock-bitmap:bench -- all --tags 30
+java_binary(
+    name = "bench",
+    srcs = ["src/Main.java"],
+    main_class = "com.tm.starrockbitmap.Main",
+    runtime_deps = [":bitmap_lib"],
+    deps = [":bitmap_lib"],
+)
+
+java_test(
+    name = "segment_expr_test",
+    srcs = ["src/SegmentExprTest.java"],
+    test_class = "com.tm.starrockbitmap.SegmentExprTest",
+    deps = [
+        ":bitmap_lib",
+        "@maven//:junit_junit",
+        "@maven//:org_roaringbitmap_RoaringBitmap",
+    ],
+)

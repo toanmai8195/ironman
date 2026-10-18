@@ -1,0 +1,58 @@
+{
+ "meta": {
+  "cmd": "ops",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 50,
+  "segments": 100,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B contains: SR bitmap_contains": {
+   "n": 2000,
+   "avg_ms": 3.81532,
+   "min_ms": 2.52671,
+   "p50_ms": 3.379,
+   "p90_ms": 5.45863,
+   "p99_ms": 9.34713,
+   "max_ms": 22.2345,
+   "sum_ms": 7630.649
+  }
+ },
+ "notes": {
+  "contains_true": 312,
+  "wall_ms": 7673,
+  "loads": 2000
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 1.6530799999999999,
+   "cpu_max": 2.1117,
+   "mem_max_gb": 6.045,
+   "net_rx_gb": 0.000323,
+   "net_tx_gb": 0.00077,
+   "samples": 5
+  },
+  "mongo": {
+   "cpu_avg": 0.024720000000000002,
+   "cpu_max": 0.09970000000000001,
+   "mem_max_gb": 0.08287109375,
+   "net_rx_gb": 2e-05,
+   "net_tx_gb": 0.00035,
+   "samples": 5
+  },
+  "service": {
+   "cpu_avg": 0.19492500000000001,
+   "cpu_max": 0.5725,
+   "mem_max_gb": 0.1357421875,
+   "net_rx_gb": 0.000322,
+   "net_tx_gb": 0.000287,
+   "samples": 4
+  }
+ },
+ "wall_seconds": 8.7,
+ "case": "t9-contains-sr",
+ "test": "t9",
+ "limits": "unlimited"
+}

@@ -227,3 +227,7 @@ bazel-*
 .idea/
 .vscode/
 *.iml
+
+
+# IntelliJ Bazel plugin
+.ijwb/

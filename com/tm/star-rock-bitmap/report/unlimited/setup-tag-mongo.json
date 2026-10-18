@@ -1,0 +1,104 @@
+{
+ "meta": {
+  "cmd": "etl",
+  "pipeline": "a",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "A1a SR agg+ship": {
+   "n": 50,
+   "avg_ms": 165.268,
+   "min_ms": 113.401,
+   "p50_ms": 149.9,
+   "p90_ms": 218.176,
+   "p99_ms": 347.495,
+   "max_ms": 347.495,
+   "sum_ms": 8263.392
+  },
+  "A1b decode SR bitmap": {
+   "n": 50,
+   "avg_ms": 15.513,
+   "min_ms": 13.839,
+   "p50_ms": 14.077,
+   "p90_ms": 15.324,
+   "p99_ms": 54.892,
+   "max_ms": 54.892,
+   "sum_ms": 775.628
+  },
+  "A1 total: SR -> bitmap": {
+   "n": 50,
+   "avg_ms": 180.831,
+   "min_ms": 127.353,
+   "p50_ms": 165.038,
+   "p90_ms": 232.097,
+   "p99_ms": 398.663,
+   "max_ms": 398.663,
+   "sum_ms": 9041.571
+  },
+  "A2 serialize": {
+   "n": 50,
+   "avg_ms": 11.452,
+   "min_ms": 10.443,
+   "p50_ms": 10.914,
+   "p90_ms": 12.04,
+   "p99_ms": 25.464,
+   "max_ms": 25.464,
+   "sum_ms": 572.595
+  },
+  "A3 mongo put chunks (<=8MB, <=10 parallel)": {
+   "n": 50,
+   "avg_ms": 36.182,
+   "min_ms": 7.698,
+   "p50_ms": 33.281,
+   "p90_ms": 56.052,
+   "p99_ms": 151.176,
+   "max_ms": 151.176,
+   "sum_ms": 1809.077
+  },
+  "A tag total: gold -> mongo": {
+   "n": 50,
+   "avg_ms": 228.465,
+   "min_ms": 160.495,
+   "p50_ms": 212.838,
+   "p90_ms": 280.439,
+   "p99_ms": 575.303,
+   "max_ms": 575.303,
+   "sum_ms": 11423.244
+  }
+ },
+ "notes": {},
+ "resources": {
+  "sr": {
+   "cpu_avg": 3.8810000000000002,
+   "cpu_max": 5.0829,
+   "mem_max_gb": 5.061,
+   "net_rx_gb": 0.000252,
+   "net_tx_gb": 0.41786,
+   "samples": 7
+  },
+  "mongo": {
+   "cpu_avg": 0.18678571428571428,
+   "cpu_max": 0.5123,
+   "mem_max_gb": 0.5283203125,
+   "net_rx_gb": 0.31379,
+   "net_tx_gb": 0.00065,
+   "samples": 7
+  },
+  "service": {
+   "cpu_avg": 0.27690000000000003,
+   "cpu_max": 0.7329000000000001,
+   "mem_max_gb": 0.30498046875,
+   "net_rx_gb": 0.393,
+   "net_tx_gb": 0.295,
+   "samples": 6
+  }
+ },
+ "wall_seconds": 12.6,
+ "case": "setup-tag-mongo",
+ "test": "setup",
+ "limits": "unlimited"
+}

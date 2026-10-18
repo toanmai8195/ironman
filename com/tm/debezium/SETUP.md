@@ -13,6 +13,7 @@ postgres ──WAL (pgoutput)──► debezium (Kafka Connect) ──► kafka 
 | `postgres/init.sql` | Schema + seed: `public.customers`, `public.orders`. Chỉ chạy lần đầu tạo volume. |
 | `connector/connector.json` | Config connector Debezium Postgres. |
 | `connector/register.sh` | Đăng ký connector (idempotent) và chờ RUNNING. |
+| `updater/` | Service Go `pg-updater`: mỗi giây (`RATE_PER_SEC`) đổi trạng thái 1 đơn hàng ngẫu nhiên, tạo luồng CDC liên tục. |
 | `consumer/` | Service Go: Kafka consumer group → parse envelope → in log. |
 | `../docker/ironman/docker-compose.yml` | Compose chung (postgres, kafka, debezium, consumer). |
 
@@ -27,11 +28,12 @@ postgres ──WAL (pgoutput)──► debezium (Kafka Connect) ──► kafka 
 Mọi lệnh chạy từ thư mục gốc repo.
 
 ```bash
-# 1. Build image consumer và load vào Docker local (máy x86: --config=linux-amd64)
+# 1. Build image consumer và updater, load vào Docker local (máy x86: --config=linux-amd64)
 bazel run --config=linux-arm64 //com/tm/debezium/consumer:cdc_consumer_docker
+bazel run --config=linux-arm64 //com/tm/debezium/updater:pg_updater_docker
 
 # 2. Dựng stack
-docker compose -f com/tm/docker/ironman/docker-compose.yml up -d
+docker compose -f com/tm/docker/ironman/docker-compose.yml --profile consumer up -d
 ```
 
 Thứ tự khởi động do `depends_on` đảm bảo:
@@ -42,7 +44,7 @@ Thứ tự khởi động do `depends_on` đảm bảo:
 4. `debezium-register` PUT connector, chờ connector + task RUNNING rồi thoát (Exit 0 là bình thường)
 5. `cdc-consumer` bắt đầu đọc từ offset đầu (`OffsetOldest`)
 
-> Compose đặt `pull_policy: never` cho `cdc-consumer`. Nếu chưa chạy bước 1, `up` sẽ báo không tìm thấy image `com.tm.go.cdc_consumer:v1.0.0`.
+> `cdc-consumer` nằm trong profile `consumer` và có `pull_policy: never`. Nếu chạy `--profile consumer` mà chưa chạy bước 1, `up` sẽ báo không tìm thấy image `com.tm.go.cdc_consumer:v1.0.0`. Không dùng profile này thì không cần build consumer (ví dụ khi chỉ chạy pipeline Flink).
 
 ## Kiểm tra
 

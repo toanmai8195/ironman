@@ -1,0 +1,64 @@
+{
+ "meta": {
+  "cmd": "etl",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 50,
+  "segments": 300,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B1 SR gold -> tag_bitmap": {
+   "n": 50,
+   "avg_ms": 224.191,
+   "min_ms": 179.773,
+   "p50_ms": 209.944,
+   "p90_ms": 279.958,
+   "p99_ms": 436.693,
+   "max_ms": 436.693,
+   "sum_ms": 11209.547
+  },
+  "B tag total: gold -> sr": {
+   "n": 50,
+   "avg_ms": 224.191,
+   "min_ms": 179.773,
+   "p50_ms": 209.944,
+   "p90_ms": 279.958,
+   "p99_ms": 436.693,
+   "max_ms": 436.693,
+   "sum_ms": 11209.547
+  }
+ },
+ "notes": {},
+ "resources": {
+  "sr": {
+   "cpu_avg": 3.2570666666666668,
+   "cpu_max": 4.149100000000001,
+   "mem_max_gb": 5.099,
+   "net_rx_gb": 4.5e-05,
+   "net_tx_gb": 0.0,
+   "samples": 9
+  },
+  "mongo": {
+   "cpu_avg": 0.09227777777777778,
+   "cpu_max": 0.43170000000000003,
+   "mem_max_gb": 0.62587890625,
+   "net_rx_gb": 0.0,
+   "net_tx_gb": 0.0007,
+   "samples": 9
+  },
+  "service": {
+   "cpu_avg": 0.050475,
+   "cpu_max": 0.2959,
+   "mem_max_gb": 0.12646484375,
+   "net_rx_gb": 6.35e-05,
+   "net_tx_gb": 7.32e-05,
+   "samples": 8
+  }
+ },
+ "wall_seconds": 17.3,
+ "case": "t2-sr",
+ "test": "t2",
+ "limits": "unlimited"
+}

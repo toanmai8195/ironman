@@ -1,0 +1,58 @@
+{
+ "meta": {
+  "cmd": "ops",
+  "pipeline": "b",
+  "export": "agg",
+  "tags": 50,
+  "segments": 100,
+  "fullGets": 40,
+  "universe": 50000000
+ },
+ "steps": {
+  "B get 1000 users page: SR bitmap_subset_limit + unnest": {
+   "n": 2000,
+   "avg_ms": 37.032,
+   "min_ms": 4.32829,
+   "p50_ms": 36.29033,
+   "p90_ms": 61.14279,
+   "p99_ms": 77.44775,
+   "max_ms": 100.90675,
+   "sum_ms": 74064.005
+  }
+ },
+ "notes": {
+  "page_users": 2000000,
+  "wall_ms": 9293,
+  "loads": 2000
+ },
+ "resources": {
+  "sr": {
+   "cpu_avg": 6.377166666666667,
+   "cpu_max": 8.0832,
+   "mem_max_gb": 6.102,
+   "net_rx_gb": 0.00057,
+   "net_tx_gb": 0.02,
+   "samples": 6
+  },
+  "mongo": {
+   "cpu_avg": 0.07318333333333334,
+   "cpu_max": 0.4065,
+   "mem_max_gb": 0.093466796875,
+   "net_rx_gb": 2e-05,
+   "net_tx_gb": 0.00035,
+   "samples": 6
+  },
+  "service": {
+   "cpu_avg": 0.36332,
+   "cpu_max": 1.1586,
+   "mem_max_gb": 0.32841796875,
+   "net_rx_gb": 0.0249,
+   "net_tx_gb": 0.00055,
+   "samples": 5
+  }
+ },
+ "wall_seconds": 10.5,
+ "case": "t9-page-sr8",
+ "test": "t9",
+ "limits": "unlimited"
+}
