@@ -28,3 +28,13 @@
 - So `jsonb_ops` (mặc định) với `jsonb_path_ops`: kích thước và việc hỗ trợ toán tử `?`.
 - Thêm `LIMIT 1` cho query BRIN: điều gì xảy ra với số block phải đọc?
 - Thiết kế exclusion constraint cho đặt phòng/lịch hẹn trùng giờ.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 6` chạy hết (khoảng `ERROR` ở mục 4 là mong đợi).
+- [ ] Mục 1 và 2: query chuyển từ Seq Scan sang Bitmap Index Scan sau khi tạo GIN.
+- [ ] Mục 3: `brin` nhỏ hơn `btree` hàng trăm lần, và bạn giải thích điều kiện để BRIN hiệu quả (`correlation` ≈ 1).
+- [ ] Mục 4: khoảng khuyến mãi chồng bị chặn bởi exclusion constraint.
+- [ ] Nói được mỗi loại index (GIN, BRIN, GiST, Hash) hợp dữ liệu nào.

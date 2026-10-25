@@ -24,3 +24,13 @@
 - Thêm cột `is_leaf` vào query 2a (danh mục không có con).
 - Tính "khách quay lại": với mỗi đơn, số ngày kể từ đơn trước của cùng khách (`lag(created_at) OVER (PARTITION BY customer_id ORDER BY created_at)`).
 - Viết lại 3b bằng `DISTINCT ON` khi N = 1, so sánh plan.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 4` chạy hết, không lỗi.
+- [ ] Mục 2: cây danh mục in đúng thụt lề 3 tầng bằng recursive CTE.
+- [ ] Mục 3a: chỉ ra dòng đồng hạng để `rank`, `dense_rank`, `row_number` ra khác nhau.
+- [ ] Mục 3e: giải thích vì sao `RANGE` và `ROWS` ra hai cột khác nhau.
+- [ ] Mục 4: `archived` + `remaining` bằng tổng reviews ban đầu.

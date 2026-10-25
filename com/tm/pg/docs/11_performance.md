@@ -27,3 +27,14 @@
 - Chạy cả bộ step 02 đến 04 rồi xem lại `pg_stat_statements`; tìm câu có `mean_ms` cao nhất.
 - Thử `EXPLAIN (ANALYZE)` mục 1 với `SET max_parallel_workers_per_gather = 0` để thấy ảnh hưởng của parallel query.
 - `ALTER TABLE orders SET (autovacuum_vacuum_scale_factor = 0.02)` và giải thích khi nào cần.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 11` chạy hết, không lỗi.
+- [ ] Mục 3: ước lượng `rows` sát thực tế hơn sau `CREATE STATISTICS`.
+- [ ] Mục 5: thấy `external merge Disk` ở 64kB và `quicksort Memory` ở 64MB.
+- [ ] Mục 6: keyset nhanh hơn OFFSET sâu rõ rệt; mục 9: `EXPLAIN` chỉ chạm vài partition.
+- [ ] Mục 10: bảng phình sau UPDATE, VACUUM không trả đĩa, VACUUM FULL trả đĩa.
+- [ ] Dùng `pg_stat_statements` tìm được câu tốn nhất và áp checklist 13 để giải thích.

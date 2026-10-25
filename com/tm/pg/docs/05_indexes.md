@@ -26,3 +26,13 @@
 - Đổi thứ tự cột thành `(created_at, customer_id)` và xem query mục 3 còn dùng được không.
 - Tìm index trùng/thừa trong `orders` bằng `pg_stat_user_indexes` + `pg_indexes`.
 - Query `WHERE customer_id::text = '123'` có dùng index không? Vì sao (ép kiểu cột làm mất index)?
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 5` chạy hết, không lỗi.
+- [ ] Ghi lại bảng trước/sau `Execution Time` cho ít nhất 4 index (đơn, phức hợp, expression, covering).
+- [ ] Thấy `Index Only Scan` với `Heap Fetches` thấp sau `VACUUM`.
+- [ ] Chỉ ra index nào thừa bằng `pg_stat_user_indexes`.
+- [ ] Giải thích leftmost prefix và vì sao hàm bọc cột làm mất index.

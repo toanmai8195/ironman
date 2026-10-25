@@ -234,7 +234,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "94uNScD8fQHN4iINk66lDu7nfRhN9KkUQs0uCLo5qB8=",
-        "usagesDigest": "Mh4OV6cPXfSbr137Yqho/JV96ersOr8VMWWRKrnOcao=",
+        "usagesDigest": "OUVC1Y4f3LD7rJJOt1mCZCmET0DmBlaY2m7hnMm7Xn8=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -322,6 +322,49 @@
                 "@@platforms//cpu:arm64": "@flink_base_linux_arm64_v8"
               },
               "bzlmod_repository": "flink_base",
+              "reproducible": true
+            }
+          },
+          "spark_base_linux_amd64": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_pull",
+            "attributes": {
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "apache/spark",
+              "identifier": "sha256:d0f5d63bfbbffdbec08debb4911554ba671a2fa7398374db8db314d80328f576",
+              "platform": "linux/amd64",
+              "target_name": "spark_base_linux_amd64",
+              "bazel_tags": []
+            }
+          },
+          "spark_base_linux_arm64": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_pull",
+            "attributes": {
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "apache/spark",
+              "identifier": "sha256:d0f5d63bfbbffdbec08debb4911554ba671a2fa7398374db8db314d80328f576",
+              "platform": "linux/arm64",
+              "target_name": "spark_base_linux_arm64",
+              "bazel_tags": []
+            }
+          },
+          "spark_base": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_alias",
+            "attributes": {
+              "target_name": "spark_base",
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "apache/spark",
+              "identifier": "sha256:d0f5d63bfbbffdbec08debb4911554ba671a2fa7398374db8db314d80328f576",
+              "platforms": {
+                "@@platforms//cpu:x86_64": "@spark_base_linux_amd64",
+                "@@platforms//cpu:arm64": "@spark_base_linux_arm64"
+              },
+              "bzlmod_repository": "spark_base",
               "reproducible": true
             }
           },
@@ -446,7 +489,10 @@
             "distroless_base_linux_arm64_v8",
             "flink_base",
             "flink_base_linux_amd64",
-            "flink_base_linux_arm64_v8"
+            "flink_base_linux_arm64_v8",
+            "spark_base",
+            "spark_base_linux_amd64",
+            "spark_base_linux_arm64"
           ],
           "explicitRootModuleDirectDevDeps": [],
           "useAllRepos": "NO",

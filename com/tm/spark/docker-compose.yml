@@ -1,0 +1,46 @@
+# Chạy các job PySpark bằng docker compose. Dữ liệu sinh ra nằm trong Docker volume `ironman-spark-data` (mount vào /data). Image do Bazel build và nạp vào Docker local (xem BUILD.bazel):
+#   bazel run --config=linux-arm64 //com/tm/spark:generate_data_docker      # mỗi lần sửa code
+#   docker compose -f com/tm/spark/docker-compose.yml run --rm generate-data
+#   Xem Spark UI: http://localhost:4041 (đặt HOLD=120 để giữ job sau khi xong; đổi cổng bằng SPARK_UI_PORT)
+#   Đổi tài nguyên: SPARK_CPUS=8 SPARK_MEM=8g SPARK_DRIVER_MEM=6g docker compose ... run --rm generate-data
+# Mỗi service là một job chạy một lần rồi thoát. `up` chạy mọi job cùng lúc, nên khi có nhiều step hãy `run --rm <service>` đúng job cần
+# (hoặc nối thứ tự bằng depends_on: condition: service_completed_successfully).
+# Thêm step mới: thêm một service theo mẫu x-spark-job (image, command giống service dưới nhưng trỏ tới /opt/app/jobs/<file>.py).
+name: ironman-spark
+
+x-spark-job: &spark-job
+  pull_policy: never          # image do Bazel load vào Docker local, không có trên registry
+  user: root                  # ghi được vào volume spark-data
+  cpus: ${SPARK_CPUS:-4}
+  mem_limit: ${SPARK_MEM:-4g}
+  environment:
+    DATA_DIR: /data
+    HOLD: ${HOLD:-0}          # giữ driver sống N giây sau khi xong để xem Spark UI
+  ports: ["${SPARK_UI_PORT:-4041}:4040"]   # 4041 vì 4040 trên host hay bị chiếm
+  volumes:
+    - spark-data:/data        # dữ liệu nằm trong Docker volume, không nằm trong thư mục repo
+
+services:
+  # Step 01 — sinh dữ liệu vào ./data
+  generate-data:
+    <<: *spark-job
+    image: com.tm.spark.generate_data:v1.0.0
+    container_name: ironman-spark-generate-data
+    # command ghi đè cmd mặc định của image (để đổi được master/bộ nhớ qua biến môi trường); entrypoint vẫn là spark-submit
+    command:
+      - --master
+      - local[${SPARK_CPUS:-4}]
+      - --driver-memory
+      - ${SPARK_DRIVER_MEM:-3g}
+      - --conf
+      - spark.ui.showConsoleProgress=false
+      - --conf
+      - spark.driver.extraJavaOptions=-Dlog4j.configurationFile=file:///opt/app/conf/log4j2.properties
+      - /opt/app/jobs/01_generate_data.py
+
+# Volume dùng chung cho mọi job: step 01 ghi, các step sau đọc. Tên cố định để docker run/xem file gọi được.
+#   Xem file:  docker run --rm -v ironman-spark-data:/data alpine ls -R /data
+#   Xoá sạch:  docker volume rm ironman-spark-data
+volumes:
+  spark-data:
+    name: ironman-spark-data

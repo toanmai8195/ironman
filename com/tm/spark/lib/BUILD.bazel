@@ -1,0 +1,8 @@
+load("@rules_python//python:defs.bzl", "py_library")
+
+# Helper dùng chung giữa các job. Job khai báo phụ thuộc bằng spark_job(deps = ["//com/tm/spark/lib:common"]).
+py_library(
+    name = "common",
+    srcs = ["common.py"],
+    visibility = ["//com/tm/spark:__subpackages__"],
+)

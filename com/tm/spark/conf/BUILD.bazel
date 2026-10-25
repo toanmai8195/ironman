@@ -1,0 +1,6 @@
+# Cấu hình đóng vào image (log4j2: chỉ in WARN trở lên).
+filegroup(
+    name = "log4j2",
+    srcs = ["log4j2.properties"],
+    visibility = ["//com/tm/spark:__subpackages__"],
+)

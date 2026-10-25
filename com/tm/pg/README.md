@@ -74,3 +74,7 @@ Tick khi trả lời được các câu tự kiểm tra của step đó mà khô
 - [ ] **09 Transaction**: MVCC tạo phiên bản dòng thế nào và `ctid` đổi ra sao khi UPDATE? Ba mức cô lập khác nhau chỗ nào, lỗi `40001` xử lý ra sao? `SKIP LOCKED` giải quyết gì? Tránh deadlock bằng cách nào?
 - [ ] **10 Lập trình**: View khác materialized view ra sao? `CONCURRENTLY` cần gì? Function khác procedure ở khả năng nào? Khi nào dùng generated column thay trigger?
 - [ ] **11 Performance**: Đọc `EXPLAIN ANALYZE`: ước lượng lệch thực tế nghĩa là gì và sửa thế nào? OFFSET khác keyset ở đâu? Partition pruning lợi gì? VACUUM khác VACUUM FULL ra sao? Dùng `pg_stat_statements` để tìm gì?
+
+## Definition of Done
+
+Mỗi doc ở `docs/` có mục **Definition of Done** ở cuối: các điều kiện kiểm chứng được (chạy ra kết quả gì, giải thích được gì, tự làm được gì). Chỉ sang step sau khi tất cả ô của step hiện tại đúng, rồi mới tick step đó trong Checklist ở trên.

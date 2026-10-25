@@ -17,6 +17,10 @@ go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
 use_repo(go_deps, "com_github_ibm_sarama", "com_github_jackc_pgx_v5")
 
+# --- Python (PySpark jobs trong com/tm/spark): chỉ dùng py_library để khai báo phụ thuộc giữa job và lib;
+# runtime là Python của image Spark, không phải toolchain của Bazel ---
+bazel_dep(name = "rules_python", version = "0.40.0")
+
 # --- OCI ---
 bazel_dep(name = "rules_oci", version = "2.2.6")
 bazel_dep(name = "tar.bzl", version = "0.3.0")
@@ -80,6 +84,23 @@ use_repo(
     "flink_base",
     "flink_base_linux_amd64",
     "flink_base_linux_arm64_v8",
+)
+
+# --- Image Spark (rules_oci): base apache/spark (có Python + PySpark) + các job PySpark của com/tm/spark vào /opt/app ---
+oci.pull(
+    name = "spark_base",
+    digest = "sha256:d0f5d63bfbbffdbec08debb4911554ba671a2fa7398374db8db314d80328f576",
+    image = "docker.io/apache/spark",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64",
+    ],
+)
+use_repo(
+    oci,
+    "spark_base",
+    "spark_base_linux_amd64",
+    "spark_base_linux_arm64",
 )
 
 # Jar bổ sung cho Flink (pin sha256). Phiên bản khớp với dependency compile trong maven.install ở trên.
