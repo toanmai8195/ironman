@@ -27,3 +27,13 @@
 | 8 | `explain()` của `groupBy().count()` | HashAggregate hai pha | partial aggregate → `Exchange` → final: giảm dữ liệu trước khi shuffle |
 
 **Bài tập:** tính funnel theo *người dùng* (một user có ít nhất một purchase / ít nhất một view). Thử `cube` thay `rollup`.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 3` chạy hết, không lỗi.
+- [ ] Mục 3: số `approx` lệch `exact` trong khoảng vài %, và bạn nêu được vì sao nó rẻ hơn.
+- [ ] Chỉ ra `HashAggregate` hai pha và `Exchange` ở mục 8, giải thích vì sao partial aggregate giảm dữ liệu shuffle.
+- [ ] Đọc được dòng subtotal/grand total trong output `rollup` bằng `grouping_id`.
+- [ ] Làm bài tập funnel theo người dùng.

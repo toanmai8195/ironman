@@ -24,3 +24,13 @@
 - Viết doanh thu theo `city` chỉ tính đơn `delivered`, sắp xếp giảm dần.
 - Đổi query 3 thành WHERE: có chạy được không? Vì sao không (aggregate không được dùng trong WHERE)?
 - Thay `ROLLUP` bằng `CUBE` và so sánh số dòng.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 2` chạy hết, không lỗi.
+- [ ] Mục 1: bốn con số `hanoi`, `no_city`, `not_hanoi_bo_sot_null`, `not_hanoi_dung` và bạn giải thích chênh lệch.
+- [ ] Phân biệt WHERE và HAVING bằng ví dụ ở mục 3; làm bài tập thử đặt aggregate vào WHERE và đọc lỗi.
+- [ ] Đọc được dòng subtotal/grand total trong `ROLLUP` (mục 4).
+- [ ] Làm bài tập doanh thu theo `city` chỉ đơn `delivered`.

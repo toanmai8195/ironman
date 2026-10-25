@@ -30,3 +30,13 @@
 **Đọc Spark UI:** Jobs/Stages (task nào chậm, *Shuffle Read/Write*, *Spill*), SQL (plan thực tế kèm số dòng mỗi node), Storage (cache), Executors (GC time). Stage có một task chạy lâu gấp nhiều lần phần còn lại là dấu hiệu skew.
 
 **Bài tập:** chạy lại mục 1 với `CORES=2` và `CORES=8`; thử bật `spark.sql.adaptive.coalescePartitions.enabled=false` ở mục 2.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 8` chạy hết; chạy lại với `HOLD=300` và mở được Spark UI.
+- [ ] Có bảng thời gian của mục 1 (200/16/4 partition) và bạn giải thích xu hướng.
+- [ ] Mục 3: lần chạy có cache nhanh hơn, và thấy dữ liệu cache ở tab Storage trước khi `unpersist`.
+- [ ] Tìm được trong Spark UI: một stage có shuffle read/write, tab SQL với số dòng mỗi node.
+- [ ] Điền được checklist 8 điểm lỗi hiệu năng với ví dụ riêng của bạn cho ít nhất 3 điểm.

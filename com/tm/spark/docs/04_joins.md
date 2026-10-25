@@ -27,3 +27,13 @@
 | 8 | **Tách khoá nóng:** broadcast phần nóng, join thường phần còn lại, `unionByName` | Xử lý riêng hot key | Phù hợp khi biết trước vài khoá nóng |
 
 **Bài tập:** đổi `N` salt thành 32 và đo lại phân bố; thử `hint("shuffle_hash")` và `hint("merge")` rồi `explain()`.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 4` chạy hết, không lỗi.
+- [ ] Mục 3 và 4: chỉ ra `SortMergeJoin` (có Exchange hai phía) và `BroadcastHashJoin` (không Exchange phía bảng lớn).
+- [ ] Mục 5: nhìn thấy một partition ôm nhiều dòng vượt trội; mục 6 và 7: phân bố đều hơn rõ rệt.
+- [ ] Nói được 3 cách xử lý skew, ưu và nhược của từng cách.
+- [ ] Làm bài tập đổi số salt và thử hint `shuffle_hash`, `merge`.

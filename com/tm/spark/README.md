@@ -37,7 +37,7 @@ Cách học: đọc doc của step, mở file `jobs/NN_*.py`, chạy rồi đọ
 
 | Step | File | Chủ đề | Doc |
 |---|---|---|---|
-| 00 | `jobs/00_basics.py` | SparkSession, DataFrame, lazy evaluation, shuffle, plan | [docs/00_basics.md](docs/00_basics.md) |
+| 00 | (chỉ đọc doc, không có code) | SparkSession, DataFrame, lazy evaluation, shuffle, plan | [docs/00_basics.md](docs/00_basics.md) |
 | 01 | `jobs/01_generate_data.py` | Sinh dữ liệu bằng Spark, ghi parquet/JSON | [docs/01_generate_data.md](docs/01_generate_data.md) |
 | 02 | `jobs/02_transformations.py` | select/filter/withColumn, NULL, chuỗi, ngày, array, JSON lỗi, dedupe | [docs/02_transformations.md](docs/02_transformations.md) |
 | 03 | `jobs/03_aggregations.py` | groupBy, distinct xấp xỉ, pivot, rollup, funnel | [docs/03_aggregations.md](docs/03_aggregations.md) |
@@ -74,3 +74,7 @@ Tick khi trả lời được các câu tự kiểm tra của step đó mà khô
 - [ ] **09 Streaming**: Output mode nào dùng khi nào? Watermark làm gì với state? Checkpoint lưu gì và vì sao không đổi logic aggregation giữa các lần chạy? Vì sao `foreachBatch` phải idempotent?
 - [ ] **10 Pipeline**: Bronze, silver, gold mỗi lớp giữ gì? `partitionOverwriteMode=dynamic` khác `overwrite` mặc định ở đâu? Quality gate chặn điều gì?
 - [ ] **11 Iceberg**: Iceberg thêm gì so với Parquet thuần? Snapshot và commit nguyên tử là gì? Hidden partitioning và partition evolution giải quyết vấn đề nào? Vì sao phải compaction và `expire_snapshots`?
+
+## Definition of Done
+
+Mỗi doc có code ở `docs/` (từ step 01) có mục **Definition of Done** ở cuối; step 00 chỉ đọc doc nên không có. Mục này gồm: các điều kiện kiểm chứng được (chạy ra kết quả gì, giải thích được gì, tự làm được gì). Chỉ sang step sau khi tất cả ô của step hiện tại đúng, rồi mới tick step đó trong Checklist ở trên.

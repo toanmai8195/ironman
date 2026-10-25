@@ -25,3 +25,12 @@
 - Cố ý để dữ liệu "có hình dạng": khách chưa mua (id > 22500), sản phẩm chưa bán (id > 2250), city NULL, phân bố lệch. Các step sau khai thác từng điểm này.
 - Vì sao subquery ở mục 7 phải tách riêng khỏi `JOIN products` có `random()` trong điều kiện ON? (Biểu thức volatile trong điều kiện join được tính lại cho từng cặp dòng.)
 - Thử `EXPLAIN ANALYZE` câu INSERT ở mục 5 và xem thời gian; sau đó thử thêm index trước khi insert và so sánh (ghi chậm hơn bao nhiêu?).
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 1` chạy xong; bảng đếm dòng khớp README (customers 25.000, orders 150.000, ...).
+- [ ] Giải thích được vì sao dữ liệu cố ý có hình dạng (khách chưa mua, sản phẩm chưa bán, city NULL, phân bố lệch).
+- [ ] Giải thích vì sao subquery chứa `random()` phải tách khỏi điều kiện JOIN.
+- [ ] Chưa có index phụ nào ngoài PK/UNIQUE (kiểm bằng `\d orders`).

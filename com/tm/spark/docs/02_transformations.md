@@ -27,3 +27,13 @@
 | 7 | Làm sạch `events_raw`: schema tường minh → `to_timestamp` → `dropDuplicates(["event_id"])` → bỏ thiếu `user_id` → ghi parquet | Pipeline làm sạch thật | In số dòng ở mỗi bước; `dropDuplicates` gây shuffle |
 
 **Bài tập:** thay `dropDuplicates` bằng window `row_number()` giữ bản có `ts` mới nhất; so sánh plan. Đếm sự kiện bị bỏ theo từng lý do.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 2` chạy xong và có `data/events`.
+- [ ] Số dòng in ở mục 7 đúng quan hệ: raw > sau dedupe > sau bỏ thiếu `user_id`, và bạn giải thích được từng chênh lệch.
+- [ ] Cho ra kết quả của 3 mode đọc JSON lỗi và nói mode nào giữ lại dòng hỏng để điều tra.
+- [ ] Giải thích được vì sao `city != 'Hanoi'` mất dòng NULL và viết được bản đúng.
+- [ ] Làm bài tập thay `dropDuplicates` bằng window giữ bản mới nhất.

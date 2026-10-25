@@ -24,3 +24,13 @@ Khi nào dùng: JSONB cho thuộc tính thay đổi theo loại, ít join. Cột
 - Chuyển `brand` thành cột thật `products.brand` bằng `ALTER TABLE ... ADD COLUMN ... GENERATED ALWAYS AS ((attrs->>'brand')) STORED` và so sánh plan.
 - Thêm `CHECK (jsonb_typeof(attrs) = 'object')`.
 - Viết query tìm sản phẩm có `warranty_months` cao nhất mỗi brand.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 8` chạy hết, không lỗi.
+- [ ] Phân biệt `->`, `->>`, `#>>`, `@>`, `?` bằng kết quả mục 1 và 2.
+- [ ] Mục 7: query chuyển sang Bitmap Index Scan sau expression index.
+- [ ] Mục 4: dựng được JSON đơn hàng kèm danh sách dòng bằng `jsonb_agg`.
+- [ ] Nêu được tiêu chí chọn JSONB hay cột thật.

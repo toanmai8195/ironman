@@ -25,3 +25,13 @@
 | Kết quả | Top 5 ngày doanh thu, buy_rate theo danh mục | |
 
 **Bài tập:** thêm bảng Gold thứ ba "top sản phẩm xem nhiều nhưng ít mua"; chia bài thành hàm có tham số `--date` để chạy incremental mỗi ngày; bỏ `partitionOverwriteMode=dynamic` và xem điều gì xảy ra với các ngày còn lại (toàn bảng bị ghi đè).
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 10` chạy hết và cả 4 dòng quality gate in `PASS`.
+- [ ] `data/lake/` có đủ `bronze`, `silver`, `gold` với các thư mục partition.
+- [ ] Phần incremental: số dòng trước và sau bằng nhau, bạn giải thích vì sao các ngày khác không bị mất.
+- [ ] Thử bỏ `partitionOverwriteMode=dynamic` và quan sát hậu quả.
+- [ ] Vẽ lại được luồng bronze → silver → gold và nói mỗi lớp giữ gì.

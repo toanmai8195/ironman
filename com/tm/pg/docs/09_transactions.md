@@ -24,3 +24,13 @@
 - Làm lại mục 5 với `SERIALIZABLE`, tái hiện *write skew* (hai transaction cùng đọc tổng rồi cùng ghi).
 - Tái hiện deadlock bằng hai session, đọc log của Postgres: `docker logs ironman-pglab`.
 - Giữ một transaction mở lâu rồi chạy `VACUUM` xem `n_dead_tup` có giảm không (transaction treo chặn dọn dẹp).
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 9` chạy hết cho các phần một session.
+- [ ] Mục 2: `ctid` đổi sau UPDATE và bạn giải thích bằng MVCC.
+- [ ] Làm tay mục 5 và 6 trên hai terminal: thấy non-repeatable read ở READ COMMITTED, thấy session 2 treo ở `FOR UPDATE`.
+- [ ] Mục 7: hai worker lấy hai nhóm job khác nhau nhờ `SKIP LOCKED`.
+- [ ] Tái hiện được một deadlock (bài tập) và nói cách tránh.

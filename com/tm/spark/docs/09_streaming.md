@@ -28,3 +28,13 @@
 **Lưu ý:** đừng đổi logic aggregation khi dùng lại checkpoint cũ; xoá thư mục checkpoint nếu muốn chạy lại từ đầu.
 
 **Bài tập:** đổi `rate` thành cửa sổ trượt `window(ts, "10 seconds", "5 seconds")`; thử `outputMode("append")` cho aggregate và đọc thông báo lỗi; thay file source bằng Kafka (stack Kafka ở `com/tm/docker/ironman`).
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 9` chạy hết, không lỗi.
+- [ ] Mục 1: thấy các cửa sổ 5s in ra theo batch trong console.
+- [ ] Mục 2: số batch bằng số file JSON (4) nhờ `maxFilesPerTrigger=1`.
+- [ ] Mục 3: lần chạy 2 không có batch nào, và bạn giải thích bằng checkpoint.
+- [ ] Nói được output mode nào hợp với aggregation, và watermark dọn state thế nào.

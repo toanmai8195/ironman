@@ -1,6 +1,6 @@
 # Step 00 — Nền tảng: SparkSession, DataFrame, lazy evaluation
 
-- **File:** `jobs/00_basics.py` · **Chạy:** `./run.sh step 0` (không cần dữ liệu)
+- **File:** không có code, step này chỉ đọc doc. Mọi khái niệm được thực hành bằng dữ liệu thật ở step 01 và 02 (và các step sau, xem bảng "Khái niệm được thực hành ở đâu").
 - **Mục đích:** hiểu mô hình của Spark trước khi viết job thật: DataFrame là *kế hoạch*, chỉ action mới chạy; shuffle là chi phí chính.
 - **Docs:** https://spark.apache.org/docs/latest/sql-programming-guide.html · https://spark.apache.org/docs/latest/rdd-programming-guide.html
 
@@ -101,14 +101,15 @@ Chỉ khi có **action** (J) thì cả chuỗi mới chạy. Xem từng bước 
 - **Catalyst:** bộ tối ưu của Spark SQL. Biến plan qua các pha parsed → analyzed → optimized → physical (đẩy filter xuống, bỏ cột thừa, chọn chiến lược join...).
 - **Spark UI:** giao diện theo dõi job tại http://localhost:4040 khi job còn sống (xem step 08).
 
-| # | Mục trong file | Làm gì | Quan sát |
-|---|---|---|---|
-| 1 | `createDataFrame` suy luận vs `StructType` vs DDL string | Ba cách khai báo schema | Khai báo tường minh tránh quét dữ liệu để đoán kiểu khi đọc file |
-| 2 | `spark.range(10M).filter().withColumn()` rồi `count()` | Lazy evaluation | Chưa có job nào cho tới khi gọi action (xem Spark UI) |
-| 3 | `explain()` trước/sau `groupBy` | Narrow vs wide transformation | Chỉ wide mới có `Exchange hashpartitioning` (shuffle) |
-| 4 | `explain(mode="extended")` | Parsed → Analyzed → Optimized → Physical plan | Đây là pipeline của Catalyst |
-| 5 | `rdd.getNumPartitions()`, `glom().map(len)` | Partition = đơn vị song song | Số partition sau shuffle = `spark.sql.shuffle.partitions` |
-| 6 | `limit(3).collect()` | Vì sao không `collect()` tập lớn | Toàn bộ dữ liệu về driver gây OOM |
-| 7 | `select`, `coalesce`, `!=` với NULL, `eqNullSafe` | Biểu thức cột và NULL | `city != 'Hanoi'` loại cả dòng NULL (như SQL) |
+## Khái niệm được thực hành ở đâu
 
-**Bài tập:** đổi `spark.sql.shuffle.partitions` thành 2 rồi xem lại mục 5; thử `big.rdd.glom()` với `repartition(3)` và so kích thước partition.
+| Khái niệm | Thực hành ở | Cách thấy |
+|---|---|---|
+| Schema suy luận vs khai báo | Step 01, 02 | Sinh dữ liệu có kiểu rõ; step 02 đọc JSON bằng schema tường minh |
+| Transformation vs action, lazy evaluation | Step 01, 02 | Chuỗi `withColumn` không chạy cho tới khi `write`/`count`; xem tab Jobs ở step 08 |
+| Narrow vs wide, shuffle, `Exchange` trong plan | Step 03 (`explain()` của `groupBy`), 04 | So plan có và không có `Exchange` |
+| Partition | Step 01 (số file = số partition), 04 (skew), 08 | Đếm file đầu ra; `spark_partition_id()` |
+| Catalyst, các pha của plan | Step 03, 06 | `explain(mode="extended")`; SQL và DataFrame ra cùng plan |
+| `collect()` nguy hiểm | Step 02 | Luôn `limit`/`show` trước |
+| NULL và `eqNullSafe` | Step 02 | Lọc `!=` mất dòng NULL |
+| Spark UI | Step 08 | `HOLD=300 ./run.sh step 8` |

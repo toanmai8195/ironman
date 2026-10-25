@@ -27,3 +27,12 @@
 | 7 | In kết quả | Số dòng, số file, dung lượng từng dataset | Số file = số partition lúc ghi |
 
 **Bài tập:** đổi `N_ORD` thành 250.000 và chạy lại; xem số file và kích thước thay đổi thế nào. Thử `repartition(1)` trước khi ghi `customers` rồi so sánh.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 1` chạy xong, in 5 dòng thống kê khớp số trong README (customers 50.000, orders 1.000.000, ...).
+- [ ] Thư mục `data/` có đủ `customers`, `products`, `orders`, `order_items`, `events_raw`.
+- [ ] Giải thích được vì sao chạy lại cho đúng cùng số liệu (seed) và vì sao số file bằng số partition lúc ghi.
+- [ ] Làm bài tập đổi `N_ORD` và nêu được số file/kích thước thay đổi theo hướng nào.

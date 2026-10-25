@@ -29,3 +29,14 @@
 **Quy tắc:** file 128MB-1GB; partition theo cột cardinality thấp (ngày, tháng, quốc gia), không theo `user_id`; gom (`repartition`/`coalesce`) trước khi ghi.
 
 **Bài tập:** thử `partitionBy("order_month", "status")` và đếm file; đọc `by_day_bad` và `by_day_good` đo thời gian khác nhau.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 7` chạy hết, không lỗi.
+- [ ] Mục 1: bảng so sánh 4 định dạng cho thấy Parquet/ORC nhỏ hơn và đọc 1 cột nhanh hơn CSV/JSON.
+- [ ] Mục 4: chỉ đúng `PartitionFilters`, `PushedFilters`, `ReadSchema` trong plan.
+- [ ] Mục 5: số file `by_day_bad` lớn hơn nhiều `by_day_good`, và bạn giải thích nguyên nhân.
+- [ ] Mục 7: plan bucketed không có `Exchange`, plan thường có.
+- [ ] Phân biệt được hai nghĩa của "partition" (Spark partition và thư mục Hive-style).
