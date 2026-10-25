@@ -13,7 +13,7 @@
 | 3 | `CREATE STATISTICS (dependencies, mcv)` trên `city, tier` | Sửa ước lượng sai khi hai cột phụ thuộc nhau | `EXPLAIN` trước/sau; ước lượng sát thực tế hơn |
 | 4 | `SET enable_hashjoin=off; enable_mergejoin=off` | Ép Nested Loop để so với Hash Join | Nested Loop chậm hơn với tập lớn; `RESET` sau khi xong |
 | 5 | `SET work_mem` 64kB vs 64MB | Sort tràn đĩa | `Sort Method: external merge Disk` so với `quicksort Memory` |
-| 6 | OFFSET 200000 vs keyset `(created_at, id) < (...)` + index | Phân trang sâu | OFFSET phải đọc rồi bỏ 200k dòng, keyset nhảy thẳng bằng index |
+| 6 | OFFSET 100000 vs keyset `(created_at, id) < (...)` + index | Phân trang sâu | OFFSET phải đọc rồi bỏ 100k dòng, keyset nhảy thẳng bằng index |
 | 7 | `customer_id = ANY (ARRAY[...])` | Thay N+1 query bằng một câu | Giảm round trip |
 | 8 | `reltuples` vs `count(*)` | Đếm xấp xỉ so với đếm chính xác | MVCC buộc `count(*)` phải quét |
 | 9 | `orders_part` PARTITION BY RANGE theo tháng | Partition pruning | `EXPLAIN` chỉ chạm vài partition; xoá dữ liệu cũ bằng `DROP/DETACH PARTITION` |

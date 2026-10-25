@@ -26,4 +26,4 @@
 | 6 | `events_raw` | Thêm ~3% thiếu `user_id`, `unionByName(sample(0.01))` tạo trùng, ghi JSON với `ts` dạng chuỗi | Dữ liệu bẩn cho step 02 và 10 |
 | 7 | In kết quả | Số dòng, số file, dung lượng từng dataset | Số file = số partition lúc ghi |
 
-**Bài tập:** đổi `N_ORD` thành 500.000 và chạy lại; xem số file và kích thước thay đổi thế nào. Thử `repartition(1)` trước khi ghi `customers` rồi so sánh.
+**Bài tập:** đổi `N_ORD` thành 250.000 và chạy lại; xem số file và kích thước thay đổi thế nào. Thử `repartition(1)` trước khi ghi `customers` rồi so sánh.

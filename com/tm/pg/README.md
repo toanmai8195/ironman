@@ -28,11 +28,11 @@ categories (cây, parent_id) ◄── products ◄── order_items ──► 
 | Bảng | Số dòng | Ghi chú để học |
 |---|---|---|
 | categories | 16 | cây 3 tầng: self join, recursive CTE |
-| customers | 50.000 | `city` có NULL; 5.000 khách cuối chưa mua gì (LEFT JOIN/anti-join) |
-| products | 5.000 | `attrs jsonb`, `tags text[]`, mô tả để full-text search; 500 sản phẩm cuối chưa bán |
-| orders | 300.000 | phân bố lệch (vài khách VIP rất nhiều đơn), enum `order_status` |
-| order_items | ~750.000 | khoá phức hợp, cột generated `line_total` |
-| reviews | ~50.000 | UNIQUE (product, customer) cho upsert |
+| customers | 25.000 | `city` có NULL; 2.500 khách cuối chưa mua gì (LEFT JOIN/anti-join) |
+| products | 2.500 | `attrs jsonb`, `tags text[]`, mô tả để full-text search; 250 sản phẩm cuối chưa bán |
+| orders | 150.000 | phân bố lệch (vài khách VIP rất nhiều đơn), enum `order_status` |
+| order_items | ~375.000 | khoá phức hợp, cột generated `line_total` |
+| reviews | ~25.000 | UNIQUE (product, customer) cho upsert |
 
 ## Lộ trình
 
@@ -57,3 +57,20 @@ categories (cây, parent_id) ◄── products ◄── order_items ──► 
 - Cấu hình Postgres cố ý gần mặc định để số đo ở step 05/11 phản ánh đúng thay đổi của query/index, không phải do tuning.
 - Step 04, 09, 10, 11 có ghi (UPDATE, tạo bảng phụ). Chạy lại `./run.sh step 0` rồi `step 1` để reset dữ liệu.
 - Step 09 có phần cần **2 session psql** (ghi chú trong file bằng `[2 SESSION]`), `run.sh` không tự chạy được phần đó.
+
+## Checklist
+
+Tick khi trả lời được các câu tự kiểm tra của step đó mà không cần nhìn doc.
+
+- [ ] **00 Schema**: PK, UNIQUE, FK, CHECK khác nhau thế nào và cái nào tự tạo index? Enum và domain dùng khi nào? `GENERATED ALWAYS` khác `BY DEFAULT`?
+- [ ] **01 Seed**: `generate_series` + `LATERAL` sinh nhiều dòng thế nào? Vì sao `random()` trong điều kiện JOIN gây sai? `ON CONFLICT DO NOTHING` làm gì?
+- [ ] **02 SELECT**: Vì sao `<> 'x'` bỏ sót NULL, `IS DISTINCT FROM` thì không? WHERE khác HAVING ra sao? `ROLLUP` và `DISTINCT ON` cho kết quả gì? Vì sao OFFSET sâu chậm?
+- [ ] **03 JOIN**: Kể đủ 6 loại join và khi nào dùng. Vì sao điều kiện bảng phải đặt trong `ON` của LEFT JOIN? `NOT IN` với NULL sai ở đâu? Fan-out là gì?
+- [ ] **04 CTE và window**: CTE khác subquery và view ra sao? Viết được recursive CTE duyệt cây. `rank`, `dense_rank`, `row_number` khác nhau thế nào? Frame `ROWS` khác `RANGE` ra sao?
+- [ ] **05 B-tree**: Đọc plan nhận ra Seq Scan, Index Scan, Bitmap, Index Only Scan. Leftmost prefix là gì? Khi nào dùng partial, expression, covering index? Index làm chậm ghi vì sao?
+- [ ] **06 Loại index**: GIN, BRIN, GiST, Hash mỗi loại hợp dữ liệu nào? BRIN cần điều kiện gì? `EXCLUDE` chặn được gì mà UNIQUE không chặn được?
+- [ ] **07 Full Text Search**: `tsvector` và `tsquery` là gì? `websearch_to_tsquery` tiện chỗ nào? Trọng số A/B ảnh hưởng xếp hạng ra sao? FTS và `pg_trgm` khác nhau thế nào, tiếng Việt xử lý ra sao?
+- [ ] **08 JSONB**: `->` khác `->>`, `@>` khác `?`. GIN và expression index mỗi cái phục vụ truy vấn nào? Khi nào dùng cột thật thay JSONB?
+- [ ] **09 Transaction**: MVCC tạo phiên bản dòng thế nào và `ctid` đổi ra sao khi UPDATE? Ba mức cô lập khác nhau chỗ nào, lỗi `40001` xử lý ra sao? `SKIP LOCKED` giải quyết gì? Tránh deadlock bằng cách nào?
+- [ ] **10 Lập trình**: View khác materialized view ra sao? `CONCURRENTLY` cần gì? Function khác procedure ở khả năng nào? Khi nào dùng generated column thay trigger?
+- [ ] **11 Performance**: Đọc `EXPLAIN ANALYZE`: ước lượng lệch thực tế nghĩa là gì và sửa thế nào? OFFSET khác keyset ở đâu? Partition pruning lợi gì? VACUUM khác VACUUM FULL ra sao? Dùng `pg_stat_statements` để tìm gì?

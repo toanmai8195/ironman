@@ -9,7 +9,7 @@
 | # | Loại | Query | Dùng để làm gì | Quan sát |
 |---|---|---|---|---|
 | 1 | INNER | order_items ⨝ products ⨝ categories | Doanh thu theo danh mục | Chỉ dòng khớp cả hai phía |
-| 2 | LEFT | customers ⟕ orders `WHERE o.id IS NULL` | Khách chưa mua gì (anti-join kiểu LEFT) | ~5.000 khách |
+| 2 | LEFT | customers ⟕ orders `WHERE o.id IS NULL` | Khách chưa mua gì (anti-join kiểu LEFT) | ~2.500 khách |
 | 2b | LEFT (bẫy) | điều kiện `o.status` ở `WHERE` vs ở `ON` | Điều kiện của bảng phải trong ON, nếu không LEFT JOIN thành INNER | Hai con số khác nhau hẳn |
 | 3 | RIGHT | order_items ⟖ products | Sản phẩm chưa bán được cái nào | Là LEFT đảo vế; ít dùng |
 | 4 | FULL | hai `VALUES` `USING (id)` | Đối soát hai nguồn: cái chỉ có ở A, chỉ có ở B, có ở cả hai | id 1 và 4 có phía NULL |

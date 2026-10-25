@@ -1,6 +1,6 @@
 # Step 06 — Các loại index khác B-tree
 
-- **File:** `sql/06_index_types.sql` · **Chạy:** `./run.sh step 6` (tạo thêm bảng `order_events` 1,5 triệu dòng và `promotions`)
+- **File:** `sql/06_index_types.sql` · **Chạy:** `./run.sh step 6` (tạo thêm bảng `order_events` 750 nghìn dòng và `promotions`)
 - **Mục đích:** biết loại index nào hợp kiểu dữ liệu/toán tử nào.
 - **Docs:** https://www.postgresql.org/docs/current/indexes-types.html · https://www.postgresql.org/docs/current/gin.html · https://www.postgresql.org/docs/current/brin.html · https://www.postgresql.org/docs/current/gist.html
 
@@ -17,7 +17,7 @@
 |---|---|---|---|
 | 1 | `tags @> ARRAY['sale','gift']` trước/sau `USING gin (tags)` | Tìm sản phẩm chứa tất cả tag; thêm `&&` (có ít nhất một) | Seq Scan → Bitmap Index Scan |
 | 2 | `attrs @> '{"brand":"Acme","color":"red"}'` với `gin (attrs jsonb_path_ops)` | Lọc JSONB theo mẫu | `jsonb_path_ops` nhỏ/nhanh hơn mặc định nhưng chỉ hỗ trợ `@>` |
-| 3a | Tạo `order_events` 1,5 triệu dòng append theo thời gian | Dữ liệu hợp BRIN | `pg_stats.correlation` ≈ 1 |
+| 3a | Tạo `order_events` 750 nghìn dòng append theo thời gian | Dữ liệu hợp BRIN | `pg_stats.correlation` ≈ 1 |
 | 3b | `btree(at)` vs `brin(at)` | So kích thước và tốc độ khoảng thời gian 1 ngày | BRIN nhỏ hơn hàng trăm lần; thử lại trên `orders.created_at` (ngẫu nhiên) sẽ thấy BRIN vô dụng |
 | 4 | `promotions` với `EXCLUDE USING gist (product_id WITH =, during WITH &&)` | Chặn hai khuyến mãi chồng thời gian cho cùng sản phẩm | Hai khoảng liền kề `[..)` được; khoảng chồng báo lỗi exclusion; `during @> date` dùng được GiST |
 | 5 | `USING hash (sku)` | So khớp `=` | Thường b-tree đã đủ, hash ít khi đáng chọn |
