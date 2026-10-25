@@ -112,4 +112,4 @@ Chỉ khi có **action** (J) thì cả chuỗi mới chạy. Xem từng bước 
 | Catalyst, các pha của plan | Step 03, 06 | `explain(mode="extended")`; SQL và DataFrame ra cùng plan |
 | `collect()` nguy hiểm | Step 02 | Luôn `limit`/`show` trước |
 | NULL và `eqNullSafe` | Step 02 | Lọc `!=` mất dòng NULL |
-| Spark UI | Step 08 | `HOLD=300 ./run.sh step 8` |
+| Spark UI | Step 08 | `docker run -e HOLD=300 -p 4041:4040 ...` |

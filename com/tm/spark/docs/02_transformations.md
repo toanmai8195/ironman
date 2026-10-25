@@ -1,6 +1,6 @@
 # Step 02 — Biến đổi và làm sạch
 
-- **File:** `jobs/02_transformations.py` · **Chạy:** `./run.sh step 2` (cần step 1; **ghi `data/events`** cho các step sau)
+- **File:** `jobs/02_transformations.py` · **Chạy:** job step 2 (cần step 1; **ghi `/data/events`** cho các step sau)
 - **Mục đích:** các phép biến đổi hằng ngày và quy trình làm sạch dữ liệu bẩn.
 - **Docs:** https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/functions.html
 
@@ -21,7 +21,7 @@
 | 1 | `select`, `filter`, `withColumn`, `when/otherwise`, `selectExpr` | Cột tuổi đơn, nhóm recent/mid/old; viết bằng biểu thức SQL | `&` `|` `~` thay `and/or/not`, nhớ bọc ngoặc |
 | 2 | Tỉ lệ NULL mỗi cột, `na.fill`, `na.drop(subset=)` | Kiểm tra và xử lý thiếu dữ liệu | Dòng một lệnh cho tỉ lệ NULL của mọi cột |
 | 3 | `regexp_extract`, `split`, `lower` | Xử lý chuỗi | |
-| 4 | `date_trunc`, `dayofweek`, `date_format`, `interval` | Xử lý ngày giờ | Múi giờ session đặt UTC trong `common.py` |
+| 4 | `date_trunc`, `dayofweek`, `date_format`, `interval` | Xử lý ngày giờ | Múi giờ session đặt UTC trong `lib/common.py` |
 | 5 | Array: `size`, `array_contains`, `explode_outer`, `struct` | Làm việc với kiểu phức hợp | `explode` bỏ dòng mảng rỗng, `explode_outer` giữ |
 | 6 | JSON lỗi: `PERMISSIVE`, `DROPMALFORMED`, `FAILFAST` | Ba chế độ xử lý dòng hỏng | PERMISSIVE giữ dòng lỗi trong `_corrupt_record` để điều tra |
 | 7 | Làm sạch `events_raw`: schema tường minh → `to_timestamp` → `dropDuplicates(["event_id"])` → bỏ thiếu `user_id` → ghi parquet | Pipeline làm sạch thật | In số dòng ở mỗi bước; `dropDuplicates` gây shuffle |
@@ -32,7 +32,7 @@
 
 Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
 
-- [ ] `./run.sh step 2` chạy xong và có `data/events`.
+- [ ] job step 2 chạy xong và có `/data/events`.
 - [ ] Số dòng in ở mục 7 đúng quan hệ: raw > sau dedupe > sau bỏ thiếu `user_id`, và bạn giải thích được từng chênh lệch.
 - [ ] Cho ra kết quả của 3 mode đọc JSON lỗi và nói mode nào giữ lại dòng hỏng để điều tra.
 - [ ] Giải thích được vì sao `city != 'Hanoi'` mất dòng NULL và viết được bản đúng.

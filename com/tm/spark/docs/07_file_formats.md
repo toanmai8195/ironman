@@ -1,6 +1,6 @@
 # Step 07 — File format, partition, pruning
 
-- **File:** `jobs/07_file_formats.py` · **Chạy:** `./run.sh step 7` (cần step 1; ghi `data/tmp/fmt/*`, vài trăm MB; tạo bảng `o_bucketed`, `c_bucketed` trong `data/warehouse`)
+- **File:** `jobs/07_file_formats.py` · **Chạy:** job step 7 (cần step 1; ghi `/data/tmp/fmt/*`, vài trăm MB; tạo bảng `o_bucketed`, `c_bucketed` trong `data/warehouse`)
 - **Mục đích:** cách lưu dữ liệu quyết định phần lớn tốc độ đọc.
 - **Docs:** https://spark.apache.org/docs/latest/sql-data-sources.html · https://spark.apache.org/docs/latest/sql-data-sources-parquet.html
 
@@ -14,7 +14,7 @@
 - **Small files problem:** quá nhiều file nhỏ làm chậm việc liệt kê và mở file, tạo quá nhiều task. Nguyên nhân thường gặp: `partitionBy` cột nhiều giá trị mà không gom dữ liệu cùng giá trị về một task. Cách chữa: `repartition(col)` hoặc `coalesce` trước khi ghi.
 - **`mergeSchema`:** khi các file có schema khác nhau (thêm cột), hợp nhất thành schema chung thay vì lấy của file đầu.
 - **Bucketing:** `bucketBy(n, col)` chia dữ liệu thành n nhóm cố định theo hash của cột ngay khi lưu; hai bảng cùng bucket theo khoá join có thể join mà không shuffle. Chỉ dùng được với `saveAsTable`.
-- **`saveAsTable` và warehouse:** ghi thành bảng có tên trong catalog, dữ liệu nằm ở `spark.sql.warehouse.dir` (đặt là `data/warehouse`).
+- **`saveAsTable` và warehouse:** ghi thành bảng có tên trong catalog, dữ liệu nằm ở `spark.sql.warehouse.dir` (đặt là `/data/warehouse`).
 
 | # | Mục trong file | Làm gì | Quan sát |
 |---|---|---|---|
@@ -34,7 +34,7 @@
 
 Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
 
-- [ ] `./run.sh step 7` chạy hết, không lỗi.
+- [ ] job step 7 chạy hết, không lỗi.
 - [ ] Mục 1: bảng so sánh 4 định dạng cho thấy Parquet/ORC nhỏ hơn và đọc 1 cột nhanh hơn CSV/JSON.
 - [ ] Mục 4: chỉ đúng `PartitionFilters`, `PushedFilters`, `ReadSchema` trong plan.
 - [ ] Mục 5: số file `by_day_bad` lớn hơn nhiều `by_day_good`, và bạn giải thích nguyên nhân.

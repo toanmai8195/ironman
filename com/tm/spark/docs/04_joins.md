@@ -1,6 +1,6 @@
 # Step 04 — Join và data skew
 
-- **File:** `jobs/04_joins.py` · **Chạy:** `./run.sh step 4` (cần step 1; chỉ đọc)
+- **File:** `jobs/04_joins.py` · **Chạy:** job step 4 (cần step 1; chỉ đọc)
 - **Mục đích:** join là phép tốn kém nhất trong Spark. Biết chọn chiến lược join và xử lý skew.
 - **Docs:** https://spark.apache.org/docs/latest/sql-performance-tuning.html#join-strategy-hints-for-sql-queries · https://spark.apache.org/docs/latest/sql-performance-tuning.html#optimizing-skew-join
 
@@ -32,7 +32,7 @@
 
 Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
 
-- [ ] `./run.sh step 4` chạy hết, không lỗi.
+- [ ] job step 4 chạy hết, không lỗi.
 - [ ] Mục 3 và 4: chỉ ra `SortMergeJoin` (có Exchange hai phía) và `BroadcastHashJoin` (không Exchange phía bảng lớn).
 - [ ] Mục 5: nhìn thấy một partition ôm nhiều dòng vượt trội; mục 6 và 7: phân bố đều hơn rõ rệt.
 - [ ] Nói được 3 cách xử lý skew, ưu và nhược của từng cách.

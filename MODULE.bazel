@@ -82,6 +82,23 @@ use_repo(
     "flink_base_linux_arm64_v8",
 )
 
+# --- Image Spark (rules_oci): base apache/spark (có Python + PySpark) + các job PySpark của com/tm/spark vào /opt/app ---
+oci.pull(
+    name = "spark_base",
+    digest = "sha256:d0f5d63bfbbffdbec08debb4911554ba671a2fa7398374db8db314d80328f576",
+    image = "docker.io/apache/spark",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64",
+    ],
+)
+use_repo(
+    oci,
+    "spark_base",
+    "spark_base_linux_amd64",
+    "spark_base_linux_arm64",
+)
+
 # Jar bổ sung cho Flink (pin sha256). Phiên bản khớp với dependency compile trong maven.install ở trên.
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 

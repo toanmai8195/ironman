@@ -6,19 +6,50 @@ Tham khảo: https://spark.apache.org/docs/latest/ · PySpark API: https://spark
 
 ## Chạy
 
-Cần Docker. Spark chạy local mode trong container `apache/spark:3.5.3-python3` (không cần cài Java/Python).
+Cần Docker và Bazel. Mỗi job là một target Bazel riêng, build thành image OCI riêng (`com.tm.spark.<tên job>:v1.0.0`) trên base `apache/spark:3.5.3-python3`, chạy Spark local mode.
 
 ```bash
-cd com/tm/spark
-./run.sh step 1        # sinh dữ liệu vào data/ (làm 1 lần)
-./run.sh step 2        # làm sạch events → data/events (cần cho step 3 trở đi)
-./run.sh step 3        # chạy từng step
-./run.sh all           # chạy 00 → 10 tuần tự
-./run.sh shell         # pyspark REPL;  ./run.sh sql  → spark-sql
-CORES=8 MEM=6g ./run.sh step 8
-HOLD=300 ./run.sh step 8    # giữ job 300s để xem Spark UI: http://localhost:4040
-./run.sh clean         # xoá data/
+# 1) Build image và nạp vào Docker local (Mac Apple Silicon; máy Intel dùng --config=linux-amd64). Chỉ cần lại khi sửa code
+bazel run --config=linux-arm64 //com/tm/spark:generate_data_docker
+
+# 2) Chạy job bằng docker compose (dữ liệu ghi vào Docker volume `ironman-spark-data`, mount ở /data trong container; không nằm trong thư mục repo)
+docker compose -f com/tm/spark/docker-compose.yml run --rm generate-data
+
+# Xem Spark UI (http://localhost:4041) trong 2 phút sau khi job xong
+HOLD=120 docker compose -f com/tm/spark/docker-compose.yml run --rm generate-data
+
+# Đổi tài nguyên (mặc định 4 CPU, container 4GB, driver 3GB); đổi cổng UI bằng SPARK_UI_PORT
+SPARK_CPUS=8 SPARK_MEM=8g SPARK_DRIVER_MEM=6g docker compose -f com/tm/spark/docker-compose.yml run --rm generate-data
 ```
+
+Mỗi job là một service trong `docker-compose.yml` (tên service: `generate-data`, ...), chạy một lần rồi thoát. `docker compose up` chạy mọi job cùng lúc (hợp khi chỉ có một job), còn từ khi có nhiều step thì dùng `run --rm <service>` cho đúng job. Không dùng compose thì `docker run --rm -v ironman-spark-data:/data com.tm.spark.generate_data:v1.0.0` cũng được (cùng volume).
+
+Xem và xoá dữ liệu trong volume:
+```bash
+docker run --rm -v ironman-spark-data:/data alpine ls -R /data     # liệt kê file
+docker run --rm -v ironman-spark-data:/data alpine du -sh /data/*   # dung lượng từng dataset
+docker volume rm ironman-spark-data                                 # xoá sạch, sinh lại bằng step 01
+```
+
+Build xong bạn tự `docker tag` / `docker push` lên registry của bạn.
+
+Target nào có: xem `BUILD.bazel`. Mỗi step mới thêm một khối `spark_job(...)` (macro ở `defs.bzl`) và một service trong `docker-compose.yml`. Step 00 chỉ đọc doc, không có target.
+
+## Cấu trúc thư mục
+
+```
+com/tm/spark/
+├── BUILD.bazel     danh sách job: mỗi spark_job(...) = 1 bộ target <name>_py / _tar / _image / _docker
+├── docker-compose.yml  mỗi job một service (image do Bazel build)
+├── defs.bzl        macro spark_job (đóng job + lib + conf vào image)
+├── jobs/           mỗi step một file NN_<tên>.py = một job
+├── lib/            py_library //com/tm/spark/lib:common (SparkSession, section, đếm file, hold...)
+├── conf/           filegroup //com/tm/spark/conf:log4j2 (log4j2.properties)
+├── docs/           doc từng step
+└── (dữ liệu sinh ra nằm trong Docker volume ironman-spark-data, không có trong repo)
+```
+
+Trong image: `/opt/app/jobs/<job>.py`, `/opt/app/lib/common.py` (nằm trong `PYTHONPATH`), `/opt/app/conf/log4j2.properties`. Mỗi image chỉ chứa job của nó và các `deps` job khai báo (`spark_job(name, src, deps = ["//com/tm/spark/lib:common"])`); thêm lib mới thì tạo `py_library` trong `lib/` và thêm vào `deps`.
 
 Cách học: đọc doc của step, mở file `jobs/NN_*.py`, chạy rồi đọc output cạnh code. Mỗi mục trong file là `section("...")` nên output có tiêu đề tương ứng. Sửa tham số rồi chạy lại để thấy khác biệt (đổi `shuffle.partitions`, tắt AQE, bỏ `broadcast`...).
 
@@ -50,7 +81,7 @@ Cách học: đọc doc của step, mở file `jobs/NN_*.py`, chạy rồi đọ
 | 10 | `jobs/10_pipeline.py` | Pipeline bronze/silver/gold, quality gate, incremental | [docs/10_pipeline.md](docs/10_pipeline.md) |
 | 11 | `jobs/11_iceberg.py` | Iceberg: MERGE, time travel, schema/partition evolution, đọc từ StarRocks (dùng lại Parquet, không seed lại) | [docs/11_iceberg.md](docs/11_iceberg.md) |
 
-`jobs/common.py` là helper chung (SparkSession, `timed()` đo bằng sink `noop`, đếm file/dung lượng, `hold()`).
+`lib/common.py` là helper chung; mỗi step bổ sung thêm hàm khi cần (hiện có `spark_session`, `section`, `dir_size_mb`, `count_files`, `hold`).
 
 ## Lưu ý
 

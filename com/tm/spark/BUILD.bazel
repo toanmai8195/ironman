@@ -1,0 +1,21 @@
+load(":defs.bzl", "spark_job")
+
+# Cấu trúc thư mục:
+#   jobs/   mỗi step một file NN_<tên>.py = một job = một target spark_job bên dưới
+#   lib/    helper dùng chung giữa các job: py_library //com/tm/spark/lib:common
+#   conf/   cấu hình (log4j2.properties): filegroup //com/tm/spark/conf:log4j2
+#   docs/   doc từng step
+#   defs.bzl  macro spark_job: tạo <name>_py, <name>_tar, <name>_image, <name>_docker
+#
+# Build + chạy một job:
+#   bazel run --config=linux-arm64 //com/tm/spark:generate_data_docker      # load vào Docker local: com.tm.spark.generate_data:v1.0.0 (máy Intel: linux-amd64)
+#   docker run --rm -v ironman-spark-data:/data com.tm.spark.generate_data:v1.0.0
+# Xem Spark UI: thêm -p 4041:4040 -e HOLD=120. Đổi tài nguyên: ghi đè cmd, vd
+#   docker run ... com.tm.spark.generate_data:v1.0.0 --master local[8] --driver-memory 6g /opt/app/jobs/01_generate_data.py
+#
+# Thêm step mới: tạo jobs/NN_<tên>.py rồi thêm một khối spark_job(...) vào cuối file này.
+
+spark_job(
+    name = "generate_data",
+    src = "jobs/01_generate_data.py",
+)

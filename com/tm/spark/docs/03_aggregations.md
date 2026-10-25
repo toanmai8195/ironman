@@ -1,6 +1,6 @@
 # Step 03 — Aggregation
 
-- **File:** `jobs/03_aggregations.py` · **Chạy:** `./run.sh step 3` (cần step 1, 2; chỉ đọc)
+- **File:** `jobs/03_aggregations.py` · **Chạy:** job step 3 (cần step 1, 2; chỉ đọc)
 - **Mục đích:** tổng hợp doanh thu, hành vi; hiểu chi phí của distinct, pivot, rollup.
 - **Docs:** https://spark.apache.org/docs/latest/sql-ref-functions-builtin.html#aggregate-functions
 
@@ -32,7 +32,7 @@
 
 Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
 
-- [ ] `./run.sh step 3` chạy hết, không lỗi.
+- [ ] job step 3 chạy hết, không lỗi.
 - [ ] Mục 3: số `approx` lệch `exact` trong khoảng vài %, và bạn nêu được vì sao nó rẻ hơn.
 - [ ] Chỉ ra `HashAggregate` hai pha và `Exchange` ở mục 8, giải thích vì sao partial aggregate giảm dữ liệu shuffle.
 - [ ] Đọc được dòng subtotal/grand total trong output `rollup` bằng `grouping_id`.

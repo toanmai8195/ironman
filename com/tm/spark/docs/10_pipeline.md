@@ -1,6 +1,6 @@
 # Step 10 — Pipeline bronze → silver → gold
 
-- **File:** `jobs/10_pipeline.py` · **Chạy:** `./run.sh step 10` (cần step 1; ghi `data/lake/{bronze,silver,gold}`, xoá và tạo lại mỗi lần)
+- **File:** `jobs/10_pipeline.py` · **Chạy:** job step 10 (cần step 1; ghi `/data/lake/{bronze,silver,gold}`, xoá và tạo lại mỗi lần)
 - **Mục đích:** gộp mọi kỹ thuật thành một pipeline hoàn chỉnh theo kiến trúc medallion.
 - **Docs:** https://spark.apache.org/docs/latest/sql-data-sources-parquet.html#partition-discovery · https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html
 
@@ -30,8 +30,8 @@
 
 Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
 
-- [ ] `./run.sh step 10` chạy hết và cả 4 dòng quality gate in `PASS`.
-- [ ] `data/lake/` có đủ `bronze`, `silver`, `gold` với các thư mục partition.
+- [ ] job step 10 chạy hết và cả 4 dòng quality gate in `PASS`.
+- [ ] `/data/lake/` có đủ `bronze`, `silver`, `gold` với các thư mục partition.
 - [ ] Phần incremental: số dòng trước và sau bằng nhau, bạn giải thích vì sao các ngày khác không bị mất.
 - [ ] Thử bỏ `partitionOverwriteMode=dynamic` và quan sát hậu quả.
 - [ ] Vẽ lại được luồng bronze → silver → gold và nói mỗi lớp giữ gì.

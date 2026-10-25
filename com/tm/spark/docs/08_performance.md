@@ -1,6 +1,6 @@
 # Step 08 — Performance và Spark UI
 
-- **File:** `jobs/08_performance.py` · **Chạy:** `./run.sh step 8` hoặc `HOLD=300 ./run.sh step 8` rồi mở http://localhost:4040
+- **File:** `jobs/08_performance.py` · **Chạy:** job step 8 (thêm `-e HOLD=300 -p 4041:4040` khi `docker run`, rồi mở http://localhost:4041)
 - **Mục đích:** biết các nút vặn chính và đọc Spark UI để tìm điểm nghẽn. Mọi phép đo bằng `timed()` (sink `noop`).
 - **Docs:** https://spark.apache.org/docs/latest/sql-performance-tuning.html · https://spark.apache.org/docs/latest/web-ui.html
 
@@ -14,7 +14,7 @@
 - **Join hint / broadcast:** ép chiến lược join, xem step 04.
 - **Khai báo `explain("formatted")`:** plan chia thành cây node đánh số kèm bảng chi tiết từng node, dễ đọc hơn bản mặc định.
 - **Spark UI:** *Jobs/Stages* (thời gian từng task, shuffle read/write, spill), *SQL* (plan thật kèm số dòng mỗi node), *Storage* (dữ liệu đang cache), *Executors* (GC, bộ nhớ). Dấu hiệu skew: một task lâu hơn các task khác nhiều lần.
-- **`HOLD`:** biến môi trường của `run.sh` giữ driver sống thêm N giây để kịp mở UI.
+- **`HOLD`:** biến môi trường `-e HOLD=<giây>` của job giữ driver sống thêm N giây để kịp mở UI (`common.hold()`).
 
 | # | Mục trong file | Làm gì | Quan sát |
 |---|---|---|---|
@@ -35,7 +35,7 @@
 
 Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
 
-- [ ] `./run.sh step 8` chạy hết; chạy lại với `HOLD=300` và mở được Spark UI.
+- [ ] job step 8 chạy hết; chạy lại với `-e HOLD=300` và mở được Spark UI.
 - [ ] Có bảng thời gian của mục 1 (200/16/4 partition) và bạn giải thích xu hướng.
 - [ ] Mục 3: lần chạy có cache nhanh hơn, và thấy dữ liệu cache ở tab Storage trước khi `unpersist`.
 - [ ] Tìm được trong Spark UI: một stage có shuffle read/write, tab SQL với số dòng mỗi node.

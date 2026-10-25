@@ -2,3 +2,6 @@ data/
 __pycache__/
 metastore_db/
 derby.log
+
+# .gitignore gốc của repo chặn mọi thư mục lib/ (dành cho Python/venv); lib/ của spark là code thật
+!lib/
