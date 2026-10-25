@@ -1,6 +1,6 @@
 # Step 05 — Window function
 
-- **File:** `jobs/05_window.py` · **Chạy:** `./run.sh step 5` (cần step 1, 2; chỉ đọc)
+- **File:** `jobs/05_window.py` · **Chạy:** job step 5 (cần step 1, 2; chỉ đọc)
 - **Mục đích:** xếp hạng, so với kỳ trước, cộng dồn và sessionization (gom event thành phiên) mà không cần self join.
 - **Docs:** https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-window.html
 
@@ -25,3 +25,13 @@
 | 6 | `explain()` | `Exchange` theo `partitionBy` + `Sort` theo `orderBy` | Window luôn kèm shuffle + sort |
 
 **Bài tập:** đổi gap thành 1 ngày và xem số phiên; tính thời lượng và số event mỗi phiên; tìm sản phẩm xem nhiều nhất trước lần `purchase` đầu tiên của mỗi phiên.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] job step 5 chạy hết, không lỗi.
+- [ ] Mục 1: giải thích được vì sao `rank` và `row_number` ra khác nhau khi đồng hạng.
+- [ ] Mục 2: tự kiểm tay một tháng: `mom_pct`, `running`, `ma3` đúng với số liệu gốc.
+- [ ] Mục 5: giải thích 3 bước của sessionization (lag, cờ, cộng dồn) và đổi ngưỡng gap để thấy số phiên đổi.
+- [ ] Chỉ ra `Exchange` + `Sort` trong plan window.

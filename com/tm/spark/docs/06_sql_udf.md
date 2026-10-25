@@ -1,6 +1,6 @@
 # Step 06 — Spark SQL và UDF
 
-- **File:** `jobs/06_sql_udf.py` · **Chạy:** `./run.sh step 6` (cần step 1, 2; chỉ đọc)
+- **File:** `jobs/06_sql_udf.py` · **Chạy:** job step 6 (cần step 1, 2; chỉ đọc)
 - **Mục đích:** dùng SQL trên DataFrame, hiểu vì sao UDF Python chậm và khi nào thay bằng built-in / higher-order function.
 - **Docs:** https://spark.apache.org/docs/latest/sql-ref.html · https://spark.apache.org/docs/latest/sql-ref-functions-udf-scalar.html
 
@@ -28,3 +28,13 @@
 **Quy tắc:** built-in → higher-order function → pandas UDF (Arrow, cần pandas) → Python UDF là phương án cuối.
 
 **Bài tập:** viết `size_py` bằng `F.expr("CASE ...")`; thử đổi UDF sang `pandas_udf` (cài thêm pandas, pyarrow trong image) và so thời gian.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] job step 6 chạy hết, không lỗi.
+- [ ] Mục 2: hai plan SQL và DataFrame giống nhau, bạn nói được vì sao.
+- [ ] Mục 5: thấy UDF chậm hơn built-in và giải thích bằng việc dữ liệu phải sang tiến trình Python.
+- [ ] Viết lại được một biến đổi mảng bằng higher-order function thay cho UDF.
+- [ ] Làm bài tập viết `size_py` bằng `CASE`.

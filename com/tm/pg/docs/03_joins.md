@@ -26,3 +26,13 @@
 - Viết lại query 2 bằng `NOT EXISTS` và `NOT IN`; so sánh `EXPLAIN` (Hash Anti Join).
 - Tổng doanh thu mỗi khách kèm số item: tính ở hai cấp (subquery) để tránh fan-out.
 - `JOIN ... USING (col)` khác `ON a.col = b.col` ở đâu (cột kết quả chỉ xuất hiện một lần)?
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 3` chạy hết, không lỗi.
+- [ ] Mục 2b: hai con số khác nhau và bạn giải thích vì sao đặt điều kiện ở `WHERE` làm LEFT thành INNER.
+- [ ] Mục 9: `NOT EXISTS` đúng, `NOT IN` ra 0, và bạn giải thích do NULL.
+- [ ] Mục 10: thấy tổng sai do fan-out và viết được cách tính đúng.
+- [ ] Viết lại anti-join bằng `NOT EXISTS` và `NOT IN`, so `EXPLAIN` (bài tập).

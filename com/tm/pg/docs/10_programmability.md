@@ -22,3 +22,13 @@
 - Gọi `CALL cancel_stale_orders(700)` và xem `order_status_log` tăng thế nào.
 - Viết trigger `BEFORE UPDATE` tự gán `updated_at = now()`.
 - Thêm cột `updated_at` vào `mv_daily_revenue` cách làm: view không có nên tính từ `max(created_at)`.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 10` chạy hết, không lỗi.
+- [ ] `order_status_log` có 2 dòng sau 2 UPDATE, bằng trigger.
+- [ ] Mục 2: `REFRESH ... CONCURRENTLY` chạy được và bạn giải thích vì sao cần unique index.
+- [ ] `CALL cancel_stale_orders(700)` chạy xong và log tăng.
+- [ ] Phân biệt được view, materialized view, function, procedure.

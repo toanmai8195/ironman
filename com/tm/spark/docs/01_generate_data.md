@@ -1,6 +1,6 @@
 # Step 01 — Sinh dữ liệu
 
-- **File:** `jobs/01_generate_data.py` · **Chạy:** `./run.sh step 1` (vài chục giây; ghi vào `data/`)
+- **File:** `jobs/01_generate_data.py` · **Chạy:** job step 1 (vài chục giây; ghi vào Docker volume `ironman-spark-data`, mount ở `/data`)
 - **Mục đích:** có bộ dữ liệu đủ lớn và có "hình dạng" cho mọi step sau, chỉ dùng Spark (không cần tải gì).
 - **Docs:** https://spark.apache.org/docs/latest/sql-data-sources-parquet.html · https://spark.apache.org/docs/latest/sql-data-sources-json.html
 
@@ -27,3 +27,12 @@
 | 7 | In kết quả | Số dòng, số file, dung lượng từng dataset | Số file = số partition lúc ghi |
 
 **Bài tập:** đổi `N_ORD` thành 250.000 và chạy lại; xem số file và kích thước thay đổi thế nào. Thử `repartition(1)` trước khi ghi `customers` rồi so sánh.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] job step 1 chạy xong, in 5 dòng thống kê khớp số trong README (customers 50.000, orders 1.000.000, ...).
+- [ ] `docker run --rm -v ironman-spark-data:/data alpine ls /data` liệt kê đủ `customers`, `products`, `orders`, `order_items`, `events_raw`.
+- [ ] Giải thích được vì sao chạy lại cho đúng cùng số liệu (seed) và vì sao số file bằng số partition lúc ghi.
+- [ ] Làm bài tập đổi `N_ORD` và nêu được số file/kích thước thay đổi theo hướng nào.

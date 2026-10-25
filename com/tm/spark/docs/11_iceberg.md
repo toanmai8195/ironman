@@ -31,3 +31,14 @@
 | 9 | Đọc từ StarRocks qua catalog `ice` (`SELECT ... FROM ice.shop.orders`) | Nhiều engine dùng chung một bảng | Thấy cùng snapshot với Spark; sau MERGE ở Spark, StarRocks thấy dữ liệu mới |
 
 **Bài tập:** chạy hai job Spark cùng `MERGE` một lúc và xem commit xung đột được xử lý thế nào; so số file và thời gian đọc của `by_day_bad` (step 07) với bảng Iceberg sau compaction.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] Stack MinIO + Iceberg REST + StarRocks chạy khoẻ (`docker ps` thấy healthy).
+- [ ] Bảng `ice.shop.orders` tạo xong và đếm dòng bằng đúng bảng Parquet gốc.
+- [ ] Mục 3: thấy ít nhất 2 snapshot sau khi có thêm một lần ghi.
+- [ ] Mục 4 và 5: sau `MERGE`, đếm dòng khác trước; `VERSION AS OF` snapshot cũ cho đúng số cũ; rollback thành công.
+- [ ] Mục 9: StarRocks đọc cùng bảng và thấy dữ liệu sau MERGE.
+- [ ] Giải thích được vì sao compaction và `expire_snapshots` cần thiết.

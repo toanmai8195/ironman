@@ -28,3 +28,13 @@ Khái niệm: `tsvector` = văn bản đã tách token, stem, bỏ stopword, kè
 - Thêm `category.name` vào `tsv` (cần trigger vì generated column không đọc được bảng khác).
 - Đo `EXPLAIN ANALYZE` với từ rất phổ biến ("product") và từ hiếm ("ergonomic") để thấy chi phí tăng theo số kết quả.
 - Gộp tìm chính xác (FTS) và tìm mờ (trigram) bằng `UNION` khi FTS không ra kết quả.
+
+## Definition of Done
+
+Xong step khi **tất cả** các ô dưới đây đúng; chưa đúng thì chưa sang step sau.
+
+- [ ] `./run.sh step 7` chạy hết, không lỗi.
+- [ ] Mục 1: giải thích `to_tsvector('english', ...)` đã stem và bỏ stopword khác `simple` ra sao.
+- [ ] Mục 3: query FTS dùng GIN (`Bitmap Index Scan on idx_products_tsv`) thay vì Seq Scan của `ILIKE`.
+- [ ] Mục 9: "dien thoai" tìm ra "Điện thoại"; mục 10: gõ sai "wirless hedphones" vẫn ra kết quả.
+- [ ] Phân biệt được khi nào dùng FTS và khi nào dùng `pg_trgm`.
